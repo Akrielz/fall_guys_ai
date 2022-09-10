@@ -1,13 +1,73 @@
+import os
 from typing import Optional
 
+import cv2
 import numpy as np
 
-from data_utils.data_handling import save_data_training
+from data_utils.data_handling import save_data_training, get_temporary_name, save_data_general
 from image_utils.grab_screen import get_screenshot
 from key_utils.get_keys import key_check
 
 
-def record_data(
+def record_data_using_stream(
+        x1: int = 0,
+        y1: int = 0,
+        x2: int = 1920,
+        y2: int = 1080,
+        directory: str = "data",
+        save_width: Optional[int] = None,
+        save_height: Optional[int] = None
+
+):
+    fps = 30
+
+    recording = False
+
+    file_path = None
+    file_name = None
+
+    targets = []
+
+    video_stream = None
+
+    while True:
+        frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
+        key = key_check()
+
+        if recording:
+            video_stream.write(frame)
+            targets.append(key)
+
+        if key == "1" and not recording:
+            print("Recording")
+            recording = True
+
+            file_name = get_temporary_name(directory, return_full_path=True)
+
+            fourcc = cv2.VideoWriter_fourcc(*'XVID')
+            video_stream = cv2.VideoWriter(f"{file_name}.avi", fourcc, fps, (save_width, save_height))
+
+        elif key == "2" and recording:
+            print("Save record")
+            recording = False
+
+            video_stream.release()
+
+            save_data_general(targets, os.path.join(directory, f"{file_name}.keys"))
+            targets = []
+            print("Record saved successfully!")
+
+        elif key == "3" and recording:
+            print("Cancel record")
+            recording = False
+
+            video_stream.release()
+            os.remove(file_path)
+
+            targets = []
+
+
+def record_data_using_ram(
         x1: int = 0,
         y1: int = 0,
         x2: int = 1920,
@@ -44,6 +104,7 @@ def record_data(
 
             save_data_training(video, targets, directory)
             video, targets = [], []
+            print("Record saved successfully!")
 
         elif key == "3" and recording:
             print("Cancel record")
@@ -52,4 +113,4 @@ def record_data(
 
 
 if __name__ == "__main__":
-    record_data(save_width=192*5, save_height=108*5)
+    record_data_using_stream(save_width=1920, save_height=1080)

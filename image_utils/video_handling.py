@@ -47,7 +47,7 @@ def view_video(
 def save_video(
         video: np.array,
         keys: Optional[List] = None,
-        fps: int = 60,
+        fps: int = 30,
         is_bgr: bool = False,
         font_size: int = 5,
         file_name: str = "video.avi",
