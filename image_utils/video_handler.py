@@ -42,8 +42,8 @@ def process_sign(number):
 
 
 def process_mouse_possition(mouse_pos):
-    x = mouse_pos[0]
-    y = mouse_pos[1]
+    x = mouse_pos[0] - 1920 // 2
+    y = mouse_pos[1] - 1080 // 2
     return f"{process_sign(x)}{process_sign(y)}"
 
 
@@ -80,8 +80,10 @@ def display_keys(font_size, frame, keys):
         y = frame.shape[0] - 40
         x = frame.shape[1] * (i + 1) * 2 // 7 - font_size * len(key) * 5 - 100
 
+        text = process_funcs[i](key)
+
         cv2.putText(
-            frame, process_funcs[i](key), (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), 1, cv2.LINE_AA
+            frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), 1, cv2.LINE_AA
         )
 
     return frame
