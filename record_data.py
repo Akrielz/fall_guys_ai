@@ -37,7 +37,7 @@ def record_data_using_stream(
             targets.append(key)
 
         if key == "1" and not recording:
-            print("Recording")
+            print("Started recording")
             recording = True
 
             file_name = get_temporary_name(directory, return_full_path=True)
@@ -46,17 +46,17 @@ def record_data_using_stream(
             video_stream = cv2.VideoWriter(f"{file_name}.avi", fourcc, fps, (save_width, save_height))
 
         elif key == "2" and recording:
-            print("Save record")
+            print("Saving recording")
             recording = False
 
             video_stream.release()
 
             save_data_general(targets, f"{file_name}.keys")
             targets = []
-            print("Record saved successfully!")
+            print("Recording saved successfully!")
 
         elif key == "3" and recording:
-            print("Cancel record")
+            print("Cancel recording")
             recording = False
 
             video_stream.release()
@@ -88,11 +88,11 @@ def record_data_using_ram(
             targets.append(key)
 
         if key == "1" and not recording:
-            print("Recording")
+            print("Started recording")
             recording = True
 
         elif key == "2" and recording:
-            print("Save record")
+            print("Saving recording")
             recording = False
 
             video.pop()
@@ -102,10 +102,10 @@ def record_data_using_ram(
 
             save_data_training(video, targets, directory)
             video, targets = [], []
-            print("Record saved successfully!")
+            print("Recording saved successfully!")
 
         elif key == "3" and recording:
-            print("Cancel record")
+            print("Cancel recording")
             recording = False
             video, targets = [], []
 
