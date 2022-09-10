@@ -62,7 +62,7 @@ def view_video(
     # <keyboard_key, mouse_key, (mouse_pos_x, mouse_pos_y)>
     for i, frame in enumerate(video):
         if keys is not None:
-            display_keys(font_size, frame, keys[i])
+            frame = display_keys(font_size, frame, keys[i])
 
         cv2.imshow('video', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -81,15 +81,10 @@ def display_keys(font_size, frame, keys):
         x = frame.shape[1] * (i + 1) * 2 // 7 - font_size * len(key) * 5 - 100
 
         cv2.putText(
-            frame,
-            process_funcs[i](key),
-            (x, y),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            font_size,
-            (255, 255, 255),
-            1,
-            cv2.LINE_AA
+            frame, process_funcs[i](key), (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), 1, cv2.LINE_AA
         )
+
+    return frame
 
 
 def save_video(
@@ -110,11 +105,7 @@ def save_video(
 
     for i, frame in enumerate(video):
         if keys is not None:
-            key = keys[i]
-            y = frame.shape[0] - 40
-            x = frame.shape[1] // 2 - font_size * len(key) * 5 // 2
-
-            cv2.putText(frame, key, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), 1, cv2.LINE_AA)
+            frame = display_keys(font_size, frame, keys[i])
 
         out.write(frame)
 
