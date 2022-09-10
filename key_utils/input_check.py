@@ -7,7 +7,7 @@ from key_utils.mouse_handler import mouse_key_check, mouse_position_check, mouse
 def input_check():
     keyboard_key = keyboard_key_check()
     mouse_key = mouse_key_check()
-    mouse_position = mouse_position_diff_check()
+    mouse_position = mouse_position_check()
 
     return keyboard_key, mouse_key, mouse_position
 
