@@ -29,7 +29,7 @@ def keyboard_key_check():
             return pseudo_key
 
     for key in single_keys:
-        if pressed_keys:
+        if key in pressed_keys:
             return key
 
     return "+"
