@@ -3,7 +3,7 @@ import pickle
 import tempfile
 from typing import Optional
 
-from image_utils.video_handling import save_video, load_video
+from image_utils.video_handler import save_video, load_video
 
 
 def get_temporary_name(directory: Optional[str] = None, return_full_path: bool = False):

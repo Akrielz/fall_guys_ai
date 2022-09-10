@@ -4,9 +4,10 @@ from typing import Optional
 import cv2
 import numpy as np
 
-from data_utils.data_handling import save_data_training, get_temporary_name, save_data_general
+from data_utils.data_handler import save_data_training, get_temporary_name, save_data_general
 from image_utils.grab_screen import get_screenshot
-from key_utils.get_keys import key_check
+from key_utils.input_check import input_check
+from key_utils.keyboard_handler import keyboard_key_check
 
 
 def record_data_using_stream(
@@ -33,11 +34,12 @@ def record_data_using_stream(
 
     while True:
         frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
-        key = key_check()
+        inputs = input_check()
+        key = inputs[0]
 
         if recording:
             video_stream.write(frame)
-            targets.append(key)
+            targets.append(inputs)
 
         if key == "1" and not recording:
             print("Started recording")
@@ -84,11 +86,12 @@ def record_data_using_ram(
 
     while True:
         frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
-        key = key_check()
+        inputs = input_check()
+        key = inputs[0]
 
         if recording:
             video.append(frame)
-            targets.append(key)
+            targets.append(inputs)
 
         if key == "1" and not recording:
             print("Started recording")
@@ -114,4 +117,4 @@ def record_data_using_ram(
 
 
 if __name__ == "__main__":
-    record_data_using_stream()
+    record_data_using_stream(save_width=192*4, save_height=108*4)

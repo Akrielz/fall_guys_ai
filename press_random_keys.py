@@ -1,26 +1,13 @@
 import random
 import time
 
-from key_utils.get_keys import key_check
-import pydirectinput
+from key_utils.keyboard_handler import keyboard_key_check
 import keyboard
-from key_utils.direct_keys import press_key, release_key, W, D, A
 
-# Sleep time after actions
 delay_time = 0.1
-
-# Wait for me to push B to start.
 keyboard.wait('B')
 time.sleep(2)
-
-# Hold down W no matter what!
 keyboard.press('w')
-
-# Randomly pick action then sleep.
-# 0 do nothing release everything ( except W )
-# 1 hold left
-# 2 hold right
-# 3 Press Jump
 
 while True:
     action = random.randint(0,0)
@@ -54,7 +41,7 @@ while True:
         time.sleep(delay_time)
 
     # End simulation by hitting h
-    keys = key_check()
+    keys = keyboard_key_check()
     if keys == "H":
         break
 
