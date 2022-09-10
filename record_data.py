@@ -53,7 +53,7 @@ def record_data_using_stream(
 
             video_stream.release()
 
-            save_data_general(targets, os.path.join(directory, f"{file_name}.keys"))
+            save_data_general(targets, f"{file_name}.keys")
             targets = []
             print("Record saved successfully!")
 
@@ -62,7 +62,7 @@ def record_data_using_stream(
             recording = False
 
             video_stream.release()
-            os.remove(file_path)
+            os.remove(f"{file_name}.avi")
 
             targets = []
 
