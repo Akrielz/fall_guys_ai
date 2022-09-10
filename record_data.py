@@ -28,6 +28,9 @@ def record_data_using_stream(
 
     video_stream = None
 
+    used_width = save_width if save_width is not None else x2 - x1
+    used_height = save_height if save_height is not None else y2 - y1
+
     while True:
         frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
         key = key_check()
@@ -43,7 +46,7 @@ def record_data_using_stream(
             file_name = get_temporary_name(directory, return_full_path=True)
 
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
-            video_stream = cv2.VideoWriter(f"{file_name}.avi", fourcc, fps, (save_width, save_height))
+            video_stream = cv2.VideoWriter(f"{file_name}.avi", fourcc, fps, (used_width, used_height))
 
         elif key == "2" and recording:
             print("Saving recording")
@@ -111,4 +114,4 @@ def record_data_using_ram(
 
 
 if __name__ == "__main__":
-    record_data_using_stream(save_width=1920, save_height=1080)
+    record_data_using_stream()
