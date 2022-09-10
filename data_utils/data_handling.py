@@ -34,7 +34,7 @@ def save_data_training(video, keys, directory: str = "data"):
     file_name = get_temporary_name()
 
     save_data_general(keys, directory, f"{file_name}.keys")
-    save_video(video, keys, file_name=os.path.join(directory, f"{file_name}.avi"))
+    save_video(video, file_name=os.path.join(directory, f"{file_name}.avi"))
 
 
 def load_data_general(file_name: str):
