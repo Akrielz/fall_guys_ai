@@ -12,7 +12,7 @@ def key_check():
         if wapi.GetAsyncKeyState(ord(key)):
             keys.append(key)
 
-    for key in "123WASD ":
+    for key in "123 WASD":
         if key in keys:
             return key
 

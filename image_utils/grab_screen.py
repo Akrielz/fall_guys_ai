@@ -32,10 +32,6 @@ def get_screenshot(
     return img_np
 
 
-def video_bgr_to_rgb(video: np.array):
-    return np.concatenate([video[:, :, :, 2:3], video[:, :, :, 1:2], video[:, :, :, 0:1]], -1)
-
-
 def image_rgb_to_bgr(img: np.array):
     return np.concatenate([img[:, :, 2:3], img[:, :, 1:2], img[:, :, 0:1]], -1)  # RGB
 

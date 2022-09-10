@@ -1,8 +1,8 @@
-import os.path
-import pickle
-import tempfile
 from typing import Optional
 
+import numpy as np
+
+from data_utils.data_handling import save_data_training
 from image_utils.grab_screen import get_screenshot
 from key_utils.get_keys import key_check
 
@@ -12,22 +12,22 @@ def record_data(
         y1: int = 0,
         x2: int = 1920,
         y2: int = 1080,
-        directory="data",
+        directory: str = "data",
         save_width: Optional[int] = None,
         save_height: Optional[int] = None
 ):
-    imgs = []
+    video = []
     targets = []
 
     recording = False
 
     while True:
-        if recording:
-            imgs.append(img)
-            targets.append(key)
-
-        img = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
+        frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
         key = key_check()
+
+        if recording:
+            video.append(frame)
+            targets.append(key)
 
         if key == "1" and not recording:
             print("Recording")
@@ -37,25 +37,19 @@ def record_data(
             print("Save record")
             recording = False
 
-            imgs.pop()
+            video.pop()
             targets.pop()
 
-            with tempfile.NamedTemporaryFile() as tf:
-                file_name = tf.name
-                file_name = file_name[file_name.rfind("\\") + 1:]
+            video = np.array(video)
 
-            file_path = os.path.join(directory, file_name)
-
-            with open(file_path, "wb") as f:
-                pickle.dump((imgs, targets), f, protocol=pickle.HIGHEST_PROTOCOL)
-
-            imgs, targets = [], []
+            save_data_training(video, targets, directory)
+            video, targets = [], []
 
         elif key == "3" and recording:
             print("Cancel record")
             recording = False
-            imgs, targets = [], []
+            video, targets = [], []
 
 
 if __name__ == "__main__":
-    record_data()
+    record_data(save_width=192*5, save_height=108*5)
