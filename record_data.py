@@ -22,8 +22,6 @@ def record_data_using_stream(
     fps = 30
 
     recording = False
-
-    file_path = None
     file_name = None
 
     targets = []
