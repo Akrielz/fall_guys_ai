@@ -4,6 +4,9 @@ from typing import Optional, List
 import cv2
 import numpy as np
 
+from key_utils.keyboard_handler import all_keys, all_key_representations
+from key_utils.mouse_handler import click_initials
+
 
 def video_bgr_to_rgb(video: np.array):
     return np.concatenate(
@@ -15,21 +18,18 @@ def video_bgr_to_rgb(video: np.array):
     )
 
 
-def process_keyboard_key(key):
-    if key == " ":
-        return "space"
+def process_keys(keys):
+    keyboard_keys = process_keyboard_key(keys[:-2])
+    mouse_keys = process_mouse_key(keys[-2:])
+    return f"{keyboard_keys} {mouse_keys}"
 
-    if key == "+":
-        return " "
 
-    return key
+def process_keyboard_key(key: List[bool]) -> str:
+    return "".join([" " if not key else all_key_representations[i] for i, key in enumerate(key)])
 
 
 def process_mouse_key(key):
-    if key == "+":
-        return " "
-
-    return key
+    return "".join([" " if not key else click_initials[i] for i, key in enumerate(key)])
 
 
 def process_sign(number):
@@ -38,13 +38,13 @@ def process_sign(number):
     elif number > 0:
         return "+"
     else:
-        return " "
+        return "*"
 
 
 def process_mouse_possition(mouse_pos):
-    x = mouse_pos[0] - 1920 // 2
-    y = mouse_pos[1] - 1080 // 2
-    return f"{process_sign(x)}{process_sign(y)}"
+    x = process_sign(mouse_pos[0])
+    y = process_sign(mouse_pos[1])
+    return f"{x}{y}"
 
 
 def view_video(
@@ -59,7 +59,6 @@ def view_video(
     if is_bgr:
         video = video_bgr_to_rgb(video)
 
-    # <keyboard_key, mouse_key, (mouse_pos_x, mouse_pos_y)>
     for i, frame in enumerate(video):
         if keys is not None:
             frame = display_keys(font_size, frame, keys[i])
@@ -74,10 +73,10 @@ def view_video(
 
 
 def display_keys(font_size, frame, keys):
-    process_funcs = [process_keyboard_key, process_mouse_key, process_mouse_possition]
+    process_funcs = [process_keys, process_mouse_possition]
 
     for i, key in enumerate(keys):
-        y = frame.shape[0] - 40
+        y = frame.shape[0] - 140
         x = frame.shape[1] * (i + 1) * 2 // 7 - font_size * len(key) * 5 - 100
 
         text = process_funcs[i](key)

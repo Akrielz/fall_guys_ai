@@ -5,16 +5,14 @@ from key_utils.mouse_handler import mouse_key_check, mouse_position_check, mouse
 
 
 def input_check():
-    keyboard_key = keyboard_key_check()
-    mouse_key = mouse_key_check()
-    mouse_position = mouse_position_check()
-
-    return keyboard_key, mouse_key, mouse_position
+    all_keys = keyboard_key_check()
+    all_keys.extend(mouse_key_check())
+    return all_keys
 
 
 if __name__ == "__main__":
     while True:
-        keyboard_key, mouse_key, mouse_position = input_check()
-        print(keyboard_key, mouse_key, mouse_position)
+        all_keys = input_check()
+        print(all_keys)
 
         time.sleep(0.01)

@@ -4,9 +4,9 @@ import win32con
 left_click_code = 0x01
 right_click_code = 0x02
 
-click_codes = [right_click_code, left_click_code]
-click_names = ["right_click", "left_click"]
-click_initials = ["R", "L"]
+click_codes = [left_click_code, right_click_code]
+click_names = ["left_click", "right_click"]
+click_initials = ["L", "R"]
 
 last_mouse_position = None
 
@@ -32,11 +32,7 @@ def mouse_position_diff_check():
 
 
 def mouse_key_check():
-    for click_code, click_initial in zip(click_codes, click_initials):
-        if wapi.GetAsyncKeyState(click_code) < 0:
-            return click_initial
-
-    return "+"
+    return [True if wapi.GetAsyncKeyState(key) else False for key in click_codes]
 
 
 def move_mouse_relative(x, y):

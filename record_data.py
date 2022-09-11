@@ -1,5 +1,6 @@
 import os
-from typing import Optional
+import threading
+from typing import Optional, Tuple, List
 
 import cv2
 import numpy as np
@@ -7,7 +8,95 @@ import numpy as np
 from data_utils.data_handler import save_data_training, get_temporary_name, save_data_general
 from image_utils.grab_screen import get_screenshot
 from key_utils.input_check import input_check
-from key_utils.keyboard_handler import keyboard_key_check
+from key_utils.mouse_handler import mouse_position_check
+
+got_frame = False
+
+results_thread = [None, None]
+
+
+def get_screenshot_thread_wrap(
+        x1: int = 0,
+        y1: int = 0,
+        x2: int = 1920,
+        y2: int = 1080,
+        save_width: Optional[int] = None,
+        save_height: Optional[int] = None,
+):
+    global got_frame
+    global results_thread
+
+    frame = get_screenshot(x1, y1, x2, y2, save_width, save_height)
+    got_frame = True
+    results_thread[1] = frame
+
+
+def get_mouse_pos_thread_wrap():
+    global got_frame
+    global results_thread
+
+    mouse_positions = []
+
+    while True:
+        mouse_position = mouse_position_check()
+        mouse_positions.append(mouse_position)
+
+        if got_frame:
+            break
+
+    results_thread[0] = mouse_positions
+
+
+def track_mouse_movement(
+        mouse_positions: List[Tuple[int, int]],
+        width: int,
+        height: int,
+) -> np.ndarray:
+    mouse_positions = np.array(mouse_positions).astype(np.float32)
+    mouse_positions[:, 0] = mouse_positions[:, 0] / width
+    mouse_positions[:, 1] = mouse_positions[:, 1] / height
+
+    mouse_positions[:, 0] = mouse_positions[:, 0] - 0.5  # [-0.5, 0.5]
+    mouse_positions[:, 1] = mouse_positions[:, 1] - 0.5  # [-0.5, 0.5]
+
+    return mouse_positions.sum(axis=0)
+
+
+def get_training_data_threads(
+        original_width: int,
+        original_height: int,
+        recording: bool,
+        x1: int = 0,
+        y1: int = 0,
+        x2: int = 1920,
+        y2: int = 1080,
+        save_width: Optional[int] = None,
+        save_height: Optional[int] = None,
+) -> Tuple[List[bool], Optional[np.ndarray], Optional[np.ndarray]]:
+    if not recording:
+        return input_check(), None, None
+
+    global got_frame
+    global results_thread
+
+    got_frame = False
+
+    thread_input = threading.Thread(target=get_mouse_pos_thread_wrap)
+    thread_screenshot = threading.Thread(
+        target=get_screenshot_thread_wrap, args=(x1, y1, x2, y2, save_width, save_height)
+    )
+
+    thread_input.start()
+    thread_screenshot.start()
+
+    thread_input.join()
+    thread_screenshot.join()
+
+    keys = input_check()
+    mouse_positions = track_mouse_movement(results_thread[0], original_width, original_height)
+    frame = results_thread[1]
+
+    return keys, mouse_positions, frame
 
 
 def record_data_using_stream(
@@ -18,7 +107,6 @@ def record_data_using_stream(
         directory: str = "data",
         save_width: Optional[int] = None,
         save_height: Optional[int] = None
-
 ):
     fps = 30
 
@@ -29,19 +117,28 @@ def record_data_using_stream(
 
     video_stream = None
 
-    used_width = save_width if save_width is not None else x2 - x1
-    used_height = save_height if save_height is not None else y2 - y1
+    original_width = x2 - x1
+    original_height = y2 - y1
+
+    used_width = save_width if save_width is not None else original_width
+    used_height = save_height if save_height is not None else original_height
 
     while True:
-        frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
-        inputs = input_check()
-        key = inputs[0]
+        keys, mouse_positions, frame = get_training_data_threads(
+            original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
+        )
+
+        inputs = (keys, mouse_positions)
+
+        start_recording_key = keys[0]
+        stop_recording_key = keys[1]
+        cancel_recording_key = keys[2]
 
         if recording:
             video_stream.write(frame)
             targets.append(inputs)
 
-        if key == "1" and not recording:
+        if start_recording_key and not recording:
             print("Started recording")
             recording = True
 
@@ -50,7 +147,7 @@ def record_data_using_stream(
             fourcc = cv2.VideoWriter_fourcc(*'XVID')
             video_stream = cv2.VideoWriter(f"{file_name}.avi", fourcc, fps, (used_width, used_height))
 
-        elif key == "2" and recording:
+        elif stop_recording_key and recording:
             print("Saving recording")
             recording = False
 
@@ -60,7 +157,7 @@ def record_data_using_stream(
             targets = []
             print("Recording saved successfully!")
 
-        elif key == "3" and recording:
+        elif cancel_recording_key and recording:
             print("Cancel recording")
             recording = False
 
@@ -84,20 +181,29 @@ def record_data_using_ram(
 
     recording = False
 
+    original_width = x2 - x1
+    original_height = y2 - y1
+
     while True:
-        frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
-        inputs = input_check()
-        key = inputs[0]
+        keys, mouse_positions, frame = get_training_data_threads(
+            original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
+        )
+
+        inputs = (keys, mouse_positions)
+
+        start_recording_key = keys[0]
+        stop_recording_key = keys[1]
+        cancel_recording_key = keys[2]
 
         if recording:
             video.append(frame)
             targets.append(inputs)
 
-        if key == "1" and not recording:
+        if start_recording_key and not recording:
             print("Started recording")
             recording = True
 
-        elif key == "2" and recording:
+        elif stop_recording_key and recording:
             print("Saving recording")
             recording = False
 
@@ -110,11 +216,11 @@ def record_data_using_ram(
             video, targets = [], []
             print("Recording saved successfully!")
 
-        elif key == "3" and recording:
+        elif cancel_recording_key and recording:
             print("Cancel recording")
             recording = False
             video, targets = [], []
 
 
 if __name__ == "__main__":
-    record_data_using_stream(save_width=192*4, save_height=108*4)
+    record_data_using_stream()
