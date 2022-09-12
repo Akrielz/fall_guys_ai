@@ -12,7 +12,7 @@ def input_check():
 
 if __name__ == "__main__":
     while True:
-        all_keys = input_check()
+        all_keys = input_check(), mouse_position_check()
         print(all_keys)
 
         time.sleep(0.01)

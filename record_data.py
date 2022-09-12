@@ -53,6 +53,16 @@ def track_mouse_movement(
         height: int,
 ) -> np.ndarray:
     mouse_positions = np.array(mouse_positions).astype(np.float32)
+
+    mouse_positions_mask_x = abs(mouse_positions[:, 0] - width/2) >= 1.02
+    mouse_positions_mask_y = abs(mouse_positions[:, 1] - height/2) >= 1.02
+    mouse_positions_mask = mouse_positions_mask_x | mouse_positions_mask_y
+
+    if not mouse_positions_mask.any():
+        return np.array([0.0, 0.0])
+
+    mouse_positions = mouse_positions[mouse_positions_mask]
+
     mouse_positions[:, 0] = mouse_positions[:, 0] / width
     mouse_positions[:, 1] = mouse_positions[:, 1] / height
 
@@ -60,6 +70,13 @@ def track_mouse_movement(
     mouse_positions[:, 1] = mouse_positions[:, 1] - 0.5  # [-0.5, 0.5]
 
     return mouse_positions.sum(axis=0)
+
+
+def track_mouse_movement_diff(
+        mouse_positions: List[Tuple[int, int]],
+):
+    mouse_positions = np.array(mouse_positions).astype(np.float32)
+    return (mouse_positions[1:] - mouse_positions[:-1]).sum(axis=0)
 
 
 def get_training_data_threads(
@@ -99,6 +116,30 @@ def get_training_data_threads(
     return keys, mouse_positions, frame
 
 
+def get_training_data(
+        original_width: int,
+        original_height: int,
+        recording: bool,
+        x1: int = 0,
+        y1: int = 0,
+        x2: int = 1920,
+        y2: int = 1080,
+        save_width: Optional[int] = None,
+        save_height: Optional[int] = None,
+        is_first_person: bool = False,
+) -> Tuple[List[bool], Optional[np.ndarray], Optional[np.ndarray]]:
+    if is_first_person:
+        return get_training_data_threads(
+            original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
+        )
+
+    frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
+    keys = input_check()
+    mouse_position = np.array(mouse_position_check()) if recording else None
+
+    return keys, mouse_position, frame
+
+
 def record_data_using_stream(
         x1: int = 0,
         y1: int = 0,
@@ -106,7 +147,8 @@ def record_data_using_stream(
         y2: int = 1080,
         directory: str = "data",
         save_width: Optional[int] = None,
-        save_height: Optional[int] = None
+        save_height: Optional[int] = None,
+        is_first_person: bool = False,
 ):
     fps = 30
 
@@ -124,8 +166,12 @@ def record_data_using_stream(
     used_height = save_height if save_height is not None else original_height
 
     while True:
-        keys, mouse_positions, frame = get_training_data_threads(
-            original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
+        keys, mouse_positions, frame = get_training_data(
+            original_width, original_height,
+            recording,
+            x1, y1, x2, y2,
+            save_width, save_height,
+            is_first_person
         )
 
         inputs = (keys, mouse_positions)
@@ -174,7 +220,8 @@ def record_data_using_ram(
         y2: int = 1080,
         directory: str = "data",
         save_width: Optional[int] = None,
-        save_height: Optional[int] = None
+        save_height: Optional[int] = None,
+        is_first_person: bool = False,
 ):
     video = []
     targets = []
@@ -185,8 +232,12 @@ def record_data_using_ram(
     original_height = y2 - y1
 
     while True:
-        keys, mouse_positions, frame = get_training_data_threads(
-            original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
+        keys, mouse_positions, frame = get_training_data(
+            original_width, original_height,
+            recording,
+            x1, y1, x2, y2,
+            save_width, save_height,
+            is_first_person
         )
 
         inputs = (keys, mouse_positions)
@@ -223,4 +274,4 @@ def record_data_using_ram(
 
 
 if __name__ == "__main__":
-    record_data_using_stream()
+    record_data_using_stream(is_first_person=True)
