@@ -11,6 +11,8 @@ single_keys = "WASD"
 all_keys = "123 WASD"
 all_key_representations = "123^WASD"
 
+inv_binary_key = ["1", "2", "3", "SPACE", "W", "A", "S", "D"]
+
 
 def keyboard_key_check():
     return [True if wapi.GetAsyncKeyState(ord(key)) else False for key in all_keys]

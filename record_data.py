@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 
 from data_utils.data_handler import save_data_training, get_temporary_name, save_data_general
-from image_utils.grab_screen import get_screenshot
+from image_utils.image_handler import get_screenshot
 from key_utils.input_check import input_check
 from key_utils.mouse_handler import mouse_position_check
 
@@ -74,7 +74,7 @@ def track_mouse_movement(
 
 def track_mouse_movement_diff(
         mouse_positions: List[Tuple[int, int]],
-):
+) -> np.ndarray:
     mouse_positions = np.array(mouse_positions).astype(np.float32)
     return (mouse_positions[1:] - mouse_positions[:-1]).sum(axis=0)
 

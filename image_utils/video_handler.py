@@ -4,8 +4,9 @@ from typing import Optional, List
 import cv2
 import numpy as np
 
-from key_utils.keyboard_handler import all_keys, all_key_representations
-from key_utils.mouse_handler import click_initials
+from draw_utils.keyboard import draw_keyboard
+from draw_utils.mouse import draw_mouse
+from key_utils.keyboard_handler import inv_binary_key
 
 
 def video_bgr_to_rgb(video: np.array):
@@ -16,20 +17,6 @@ def video_bgr_to_rgb(video: np.array):
             video[:, :, :, 0:1]
         ], -1
     )
-
-
-def process_keys(keys):
-    keyboard_keys = process_keyboard_key(keys[:-2])
-    mouse_keys = process_mouse_key(keys[-2:])
-    return f"{keyboard_keys} {mouse_keys}"
-
-
-def process_keyboard_key(key: List[bool]) -> str:
-    return "".join([" " if not key else all_key_representations[i] for i, key in enumerate(key)])
-
-
-def process_mouse_key(key):
-    return "".join([" " if not key else click_initials[i] for i, key in enumerate(key)])
 
 
 def process_sign(number):
@@ -47,12 +34,52 @@ def process_mouse_possition(mouse_pos):
     return f"{x}{y}"
 
 
+def display_keys(frame, keys):
+    pressed_keys = keys[0]
+    mouse_position = keys[1]
+
+    mouse_keys = pressed_keys[-2:]
+    keyboard_keys = pressed_keys[:-2]
+
+    height = frame.shape[0]
+    width = frame.shape[1]
+
+    mouse_pos = (width * 4 // 5, height * 8 // 10)
+
+    size = min(width, height) // 20
+
+    frame = draw_mouse(
+        frame,
+        mouse_pos[0], mouse_pos[1],
+        size=size,
+        inner_color=(0, 0, 0), stroke_color=(249, 47, 138),
+        thickness=1,
+        left_click=mouse_keys[0],
+        right_click=mouse_keys[1],
+    )
+
+    keyboard_pos = [width * 1 // 5, height * 8 // 10]
+    keyboard_pos[1] += int(size * 0.5)
+
+    keyboard_pressed = [val for val, pressed in zip(inv_binary_key, keyboard_keys) if pressed]
+
+    frame = draw_keyboard(
+        frame,
+        keyboard_pos[0], keyboard_pos[1],
+        size=int(size * (2.5 / 4)),
+        inner_color=(0, 0, 0), stroke_color=(249, 47, 138),
+        thickness=1,
+        keys_pressed=keyboard_pressed
+    )
+
+    return frame
+
+
 def view_video(
         video: np.array,
         keys: Optional[List] = None,
         fps: int = 60,
         is_bgr: bool = False,
-        font_size: int = 1,
 ):
     video = video.astype(np.uint8)
 
@@ -61,7 +88,7 @@ def view_video(
 
     for i, frame in enumerate(video):
         if keys is not None:
-            frame = display_keys(font_size, frame, keys[i])
+            frame = display_keys(frame, keys[i])
 
         cv2.imshow('video', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -70,22 +97,6 @@ def view_video(
         time.sleep(1 / fps)
 
     cv2.destroyAllWindows()
-
-
-def display_keys(font_size, frame, keys):
-    process_funcs = [process_keys, process_mouse_possition]
-
-    for i, key in enumerate(keys):
-        y = frame.shape[0] - 140
-        x = frame.shape[1] * (i + 1) * 2 // 7 - font_size * len(key) * 5 - 100
-
-        text = process_funcs[i](key)
-
-        cv2.putText(
-            frame, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX, font_size, (255, 255, 255), 1, cv2.LINE_AA
-        )
-
-    return frame
 
 
 def save_video(
@@ -108,6 +119,7 @@ def save_video(
         if keys is not None:
             frame = display_keys(font_size, frame, keys[i])
 
+        # Add drawing with a mouse
         out.write(frame)
 
     out.release()
