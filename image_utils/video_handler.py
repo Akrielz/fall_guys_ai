@@ -138,3 +138,17 @@ def load_video(file_name: str):
 
     cap.release()
     return np.array(frames)
+
+
+def load_video_iterator(file_name: str):
+    cap = cv2.VideoCapture(file_name)
+
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        yield frame
+
+    cap.release()
+    return

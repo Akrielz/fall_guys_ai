@@ -1,5 +1,6 @@
 import os
 import threading
+from datetime import datetime
 from typing import Optional, Tuple, List
 
 import cv2
@@ -13,6 +14,11 @@ from key_utils.mouse_handler import mouse_position_check
 got_frame = False
 
 results_thread = [None, None]
+
+
+def print_current_time():
+    get_current_date_time = datetime.now().strftime("%Y %m %d %H:%M:%S")
+    print(f"Current date and time: {get_current_date_time}\n")
 
 
 def get_screenshot_thread_wrap(
@@ -186,6 +192,7 @@ def record_data_using_stream(
 
         if start_recording_key and not recording:
             print("Started recording")
+            print_current_time()
             recording = True
 
             file_name = get_temporary_name(directory, return_full_path=True)
@@ -195,16 +202,22 @@ def record_data_using_stream(
 
         elif stop_recording_key and recording:
             print("Saving recording")
+            print_current_time()
+
             recording = False
 
             video_stream.release()
 
             save_data_general(targets, f"{file_name}.keys")
             targets = []
+
             print("Recording saved successfully!")
+            print_current_time()
 
         elif cancel_recording_key and recording:
             print("Cancel recording")
+            print_current_time()
+
             recording = False
 
             video_stream.release()
