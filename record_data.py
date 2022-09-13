@@ -7,7 +7,7 @@ import cv2
 import numpy as np
 
 from data_utils.data_handler import save_data_training, get_temporary_name, save_data_general
-from image_utils.image_handler import get_screenshot
+from image_utils.image_handler import get_screenshot_mss_api
 from key_utils.input_check import input_check
 from key_utils.mouse_handler import mouse_position_check
 
@@ -32,7 +32,7 @@ def get_screenshot_thread_wrap(
     global got_frame
     global results_thread
 
-    frame = get_screenshot(x1, y1, x2, y2, save_width, save_height)
+    frame = get_screenshot_mss_api(x1, y1, x2, y2, save_width, save_height)
     got_frame = True
     results_thread[1] = frame
 
@@ -139,7 +139,7 @@ def get_training_data(
             original_width, original_height, recording, x1, y1, x2, y2, save_width, save_height
         )
 
-    frame = get_screenshot(x1, y1, x2, y2, save_width, save_height) if recording else None
+    frame = get_screenshot_mss_api(x1, y1, x2, y2, save_width, save_height) if recording else None
     keys = input_check()
     mouse_position = np.array(mouse_position_check()) if recording else None
 
