@@ -3,7 +3,7 @@ from typing import Tuple
 from torch import nn
 from torch.nn import functional as F
 
-from model.conv_block_3d import ConvBlock3d
+from model.video.conv_block_3d import ConvBlock3d
 
 
 class ResidualBlock3d(nn.Module):

@@ -80,13 +80,16 @@ def view_video(
         keys: Optional[List] = None,
         fps: int = 60,
         is_bgr: bool = False,
+        display_height: Optional[int] = None,
+        display_width: Optional[int] = None,
 ):
-    video = video.astype(np.uint8)
-
     if is_bgr:
         video = video_bgr_to_rgb(video)
 
     for i, frame in enumerate(video):
+        if display_height is not None and display_width is not None:
+            frame = cv2.resize(frame, (display_width, display_height))
+
         if keys is not None:
             frame = display_keys(frame, keys[i])
 
@@ -107,8 +110,6 @@ def save_video(
         font_size: int = 5,
         file_name: str = "video.avi",
 ):
-    video = video.astype(np.uint8)
-
     if is_bgr:
         video = video_bgr_to_rgb(video)
 
@@ -151,4 +152,19 @@ def load_video_iterator(file_name: str):
         yield frame
 
     cap.release()
+    return
+
+
+def load_video_batch_iterator(file_name: str, batch_size=1):
+    frames = []
+
+    for frame in load_video_iterator(file_name):
+        frames.append(frame)
+
+        if len(frames) == batch_size:
+            yield np.array(frames)
+            frames = []
+
+    yield np.array(frames)
+
     return

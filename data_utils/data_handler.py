@@ -3,7 +3,7 @@ import pickle
 import tempfile
 from typing import Optional
 
-from image_utils.video_handler import save_video, load_video
+from image_utils.video_handler import save_video, load_video, load_video_iterator
 
 
 def get_temporary_name(directory: Optional[str] = None, return_full_path: bool = False):
@@ -44,8 +44,12 @@ def load_data_general(file_name: str):
         return pickle.load(f)
 
 
-def load_data_training(file_name: str):
+def load_data_training(file_name: str, video_iterator: bool = False):
     keys = load_data_general(f"{file_name}.keys")
-    video = load_video(file_name=f"{file_name}.avi")
+
+    if video_iterator:
+        video = load_video_iterator(file_name=f"{file_name}.avi")
+    else:
+        video = load_video(file_name=f"{file_name}.avi")
 
     return video, keys
