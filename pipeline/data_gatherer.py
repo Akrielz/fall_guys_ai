@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import torch
 from tqdm import tqdm
 
 from data_utils.data_handler import load_data_general
@@ -86,7 +87,12 @@ class Gatherer:
                     mouse_batch.append(mouse)
                     mask_batch.append(mask)
 
-                yield np.array(video_batch), np.array(key_batch), np.array(mouse_batch), np.array(mask_batch)
+                video_batch = torch.from_numpy(np.array(video_batch))
+                key_batch = torch.from_numpy(np.array(key_batch))
+                mouse_batch = torch.from_numpy(np.array(mouse_batch))
+                mask_batch = torch.from_numpy(np.array(mask_batch))
+
+                yield video_batch, key_batch, mouse_batch, mask_batch
 
     def _load_keys_time_batch_iterator(self, keys):
         for i in range(0, len(keys), self.time_size):
@@ -116,6 +122,6 @@ class Gatherer:
 
 
 if __name__ == "__main__":
-    gatherer = Gatherer(batch_size=1, time_size=40, data_dir="data/test", debug=True, progress_bar=True)
+    gatherer = Gatherer(batch_size=1, time_size=1, data_dir="data/train", debug=True, progress_bar=True)
     for videos, keys, mouse, masks in (gatherer.iter_epoch_data()):
         pass

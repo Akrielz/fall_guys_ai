@@ -2,7 +2,7 @@ import torch.optim
 from torch import nn
 
 
-class Trainer:
+class TrainerImage:
     def __init__(
             self,
             model: nn.Module,
