@@ -168,3 +168,10 @@ def load_video_batch_iterator(file_name: str, batch_size=1):
     yield np.array(frames)
 
     return
+
+
+def load_video_len(file_name: str):
+    cap = cv2.VideoCapture(file_name)
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return length

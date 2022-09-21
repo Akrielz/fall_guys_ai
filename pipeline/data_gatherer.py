@@ -1,16 +1,19 @@
 import os
 
 import numpy as np
+from tqdm import tqdm
 
 from data_utils.data_handler import load_data_general
-from image_utils.video_handler import load_video_batch_iterator
+from image_utils.video_handler import load_video_batch_iterator, load_video_len
 
 
 class Gatherer:
-    def __init__(self, batch_size, time_size, data_dir):
+    def __init__(self, batch_size, time_size, data_dir, debug=False, progress_bar=False):
         self.batch_size = batch_size
         self.time_size = time_size
         self.data_dir = data_dir
+        self.debug = debug
+        self.progress_bar = progress_bar
 
         self.file_names = self._read_file_names()
 
@@ -18,22 +21,87 @@ class Gatherer:
         return [file_name[:-4] for file_name in os.listdir(self.data_dir) if file_name.endswith(".avi")]
 
     def iter_epoch_file_names(self):
+        if self.debug:
+            np.random.seed(0)
+
         permutation = np.random.permutation(len(self.file_names))
 
-        for i in range(0, len(self.file_names), self.batch_size):
+        file_len_iter = range(0, len(self.file_names), self.batch_size)
+        if self.progress_bar:
+            file_len_iter = tqdm(file_len_iter)
+
+        for i in file_len_iter:
             batch = permutation[i:i + self.batch_size]
             batch = [self.file_names[index] for index in batch]
 
             yield batch
 
+    def _pad_data(self, data, max_len):
+        if len(data) < max_len:
+            data = np.concatenate([data, np.zeros([max_len - len(data), *data.shape[1:]])], axis=0)
+
+        return data
+
     def iter_epoch_data(self):
         for file_names in self.iter_epoch_file_names():
-            generators = [self._iter_data(file_name) for file_name in file_names]
-            break
+            lengths = self._get_video_lens(file_names)
+            max_len = max(lengths)
 
-    def _load_keys_batch_iterator(self, keys):
+            video_shape = None
+            key_shape = None
+            mouse_shape = None
+
+            generators = [self._iter_data(file_name) for file_name in file_names]
+
+            for time in range(0, max_len, self.time_size):
+                video_batch = []
+                key_batch = []
+                mouse_batch = []
+                mask_batch = []
+
+                for length, generator in zip(lengths, generators):
+
+                    if time < length:
+                        video, keys, mouse = next(generator)
+                        mask = np.ones(len(video), dtype=bool)
+
+                        if video_shape is None:
+                            video_shape = video.shape[1:]
+                            key_shape = keys.shape[1:]
+                            mouse_shape = mouse.shape[1:]
+                    else:
+                        video = np.zeros([self.time_size, *video_shape])
+                        keys = np.zeros([self.time_size, *key_shape])
+                        mouse = np.zeros([self.time_size, *mouse_shape])
+                        mask = np.zeros(self.time_size, dtype=bool)
+
+                    if len(video) < self.time_size:
+                        video = self._pad_data(video, self.time_size)
+                        keys = self._pad_data(keys, self.time_size)
+                        mouse = self._pad_data(mouse, self.time_size)
+                        mask = self._pad_data(mask, self.time_size)
+
+                    video_batch.append(video)
+                    key_batch.append(keys)
+                    mouse_batch.append(mouse)
+                    mask_batch.append(mask)
+
+                yield np.array(video_batch), np.array(key_batch), np.array(mouse_batch), np.array(mask_batch)
+
+    def _load_keys_time_batch_iterator(self, keys):
         for i in range(0, len(keys), self.time_size):
-            yield keys[i:i + self.time_size]
+            sub_batch = keys[i:i + self.time_size]
+
+            buttons_batch = []
+            mouse_batch = []
+            for buttons, mouse in sub_batch:
+                buttons_batch.append(buttons)
+                mouse_batch.append(mouse)
+
+            yield np.array(buttons_batch), np.array(mouse_batch)
+
+    def _get_video_lens(self, file_names):
+        return [load_video_len(os.path.join(self.data_dir, f"{file_name}.avi")) for file_name in file_names]
 
     def _iter_data(self, file_name):
         file_path = os.path.join(self.data_dir, file_name)
@@ -41,13 +109,13 @@ class Gatherer:
         video = load_video_batch_iterator(f"{file_path}.avi", batch_size=self.time_size)
 
         keys = load_data_general(f"{file_path}.keys")
-        keys = self._load_keys_batch_iterator(keys)
+        keys = self._load_keys_time_batch_iterator(keys)
 
-        for video_batch, key_batch in zip(video, keys):
-            yield video_batch, key_batch
+        for video_time_batch, (key_time_batch, mouse_time_batch) in zip(video, keys):
+            yield video_time_batch, key_time_batch, mouse_time_batch
 
 
 if __name__ == "__main__":
-    gatherer = Gatherer(3, 1, "data/train")
-    for videos, keys in gatherer.iter_epoch_data():
+    gatherer = Gatherer(batch_size=1, time_size=40, data_dir="data/test", debug=True, progress_bar=True)
+    for videos, keys, mouse, masks in (gatherer.iter_epoch_data()):
         pass
