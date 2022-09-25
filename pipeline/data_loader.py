@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import numpy as np
 import torch
@@ -8,12 +9,19 @@ from data_utils.data_handler import load_data_general
 from image_utils.video_handler import load_video_batch_iterator, load_video_len
 
 
-class Gatherer:
-    def __init__(self, batch_size, time_size, data_dir, debug=False, progress_bar=False):
+class DataLoader:
+    def __init__(
+            self,
+            batch_size: int,
+            time_size: int,
+            data_dir: str,
+            seed: Optional[int] = None,
+            progress_bar=False
+    ):
         self.batch_size = batch_size
         self.time_size = time_size
         self.data_dir = data_dir
-        self.debug = debug
+        self.seed = seed
         self.progress_bar = progress_bar
 
         self.file_names = self._read_file_names()
@@ -22,8 +30,8 @@ class Gatherer:
         return [file_name[:-4] for file_name in os.listdir(self.data_dir) if file_name.endswith(".avi")]
 
     def iter_epoch_file_names(self):
-        if self.debug:
-            np.random.seed(0)
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         permutation = np.random.permutation(len(self.file_names))
 
@@ -37,9 +45,12 @@ class Gatherer:
 
             yield batch
 
-    def _pad_data(self, data, max_len):
+    @staticmethod
+    def _pad_data(data: np.ndarray, max_len: int):
+        data_dtype = data.dtype
         if len(data) < max_len:
-            data = np.concatenate([data, np.zeros([max_len - len(data), *data.shape[1:]])], axis=0)
+            pad_values = np.zeros([max_len - len(data), *data.shape[1:]], dtype=data_dtype)
+            data = np.concatenate([data, pad_values], axis=0)
 
         return data
 
@@ -122,6 +133,6 @@ class Gatherer:
 
 
 if __name__ == "__main__":
-    gatherer = Gatherer(batch_size=1, time_size=1, data_dir="data/train", debug=True, progress_bar=True)
+    gatherer = DataLoader(batch_size=1, time_size=1, data_dir="data/train", seed=0, progress_bar=True)
     for videos, keys, mouse, masks in (gatherer.iter_epoch_data()):
         pass
