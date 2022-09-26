@@ -8,8 +8,10 @@ import numpy as np
 import torch.optim
 from colorama import Fore
 from einops import rearrange
+from einops.layers.torch import Rearrange
 from torch import nn
 from tqdm import tqdm
+from vision_models_playground.models.augmenters import Augmeneter
 
 from pipeline.data_loader import DataLoader
 
@@ -30,6 +32,7 @@ class TrainerImage:
             consider_last_n_losses: int = 10,
             consider_min_n_losses: int = 5,
             model_name: Optional[str] = None,
+            apply_augmentations: bool = False,
     ):
         # Save data
         self.model = model
@@ -95,7 +98,7 @@ class TrainerImage:
         }
 
         # Init best loss
-        self.best_loss_mean = 1e9
+        self.best_loss_mean = float('inf')
         self.last_n_losses = []
 
         # Create save dir for agents
@@ -113,7 +116,17 @@ class TrainerImage:
         self.agent_path = os.path.join(self.save_dir, agent_name + '.pt')
         self.best_agent_path = os.path.join(self.save_dir, best_agent_name + '.pt')
 
-    def _collate_fn(
+        # Create image augmenter
+        self.image_augmenter = nn.Sequential(
+            Rearrange('b h w c -> b c h w'),
+            Augmeneter(
+                image_size=(216, 384), background_color=1.0, rotation_angles=15
+            ),
+            Rearrange('b c h w -> b h w c')
+        ) if apply_augmentations else None
+        # Note: The image augmenter is working on CPU so it is compatible with the collate_fn
+
+    def _collate_fn_cpu(
             self,
             frames: torch.Tensor,
             keys: torch.Tensor,
@@ -128,15 +141,19 @@ class TrainerImage:
         Note: All the operations are kept on CPU
         """
 
-        if masks.dtype != torch.bool:
-            print('Converting masks to bool')
-
         # Combine batch and time dimensions
         frames, keys, masks = list(map(lambda x: rearrange(x, "b t ... -> (b t) ..."), [frames, keys, masks]))
 
         # Apply mask
         frames = frames[masks]
         keys = keys[masks]
+
+        # Apply augmentations
+        if self.image_augmenter is not None:
+            frames_augmented = self.image_augmenter(frames)
+            frames = torch.cat([frames, frames_augmented], dim=0)
+            keys = torch.cat([keys, keys], dim=0)
+            masks = torch.cat([masks, masks], dim=0)
 
         # Get black and white frames
         def threshold_frame(frame: np.ndarray):
@@ -165,12 +182,25 @@ class TrainerImage:
 
         return frames, keys, masks
 
+    def _collate_fn_device(
+            self,
+            frames: torch.Tensor,
+            keys: torch.Tensor,
+            masks: torch.Tensor
+    ):
+        # Move data to device
+        frames = frames.to(self.device)
+        keys = keys.to(self.device)
+        masks = masks.to(self.device)
+
+        return frames, keys, masks
+
     def _save_best_model(self, loss: torch.Tensor):
         self.last_n_losses.append(loss.item())
         if len(self.last_n_losses) > self.consider_last_n_losses:
             self.last_n_losses.pop(0)
 
-        if len(self.last_n_losses) > self.consider_min_n_losses:
+        if len(self.last_n_losses) >= self.consider_min_n_losses:
             loss_mean = sum(self.last_n_losses) / len(self.last_n_losses)
 
             if loss_mean < self.best_loss_mean:
@@ -198,12 +228,8 @@ class TrainerImage:
         progress_bar = tqdm(gatherer_iter)
         for step_index, (file_index, frames, keys, _, masks) in enumerate(progress_bar):
             # Apply collate function
-            frames, keys, masks = self._collate_fn(frames, keys, masks)
-
-            # Move data to device
-            frames = frames.to(self.device)
-            keys = keys.to(self.device)
-            masks = masks.to(self.device)
+            frames, keys, masks = self._collate_fn_cpu(frames, keys, masks)
+            frames, keys, mask = self._collate_fn_device(frames, keys, masks)
 
             # Forward pass
             if phase == 'train':
@@ -246,7 +272,11 @@ class TrainerImage:
             metric_log += f'{metric.__repr__()[:-2]}: {metric.compute():.4f} | '
 
         loss_name = "Loss" if len(self.loss_fn.__repr__()) > 30 else self.loss_fn.__repr__()[:-2]
-        loss_log = f'{loss_name}: {loss.item():.4f} '
+
+        loss_log = f'{loss_name}: {loss.item():.4f}'
+        if self.best_loss_mean != float('inf'):
+            loss_log += f' | Best loss: {self.best_loss_mean:.4f}'
+
         description = color + f"{phase} Epoch: {epoch}, File: {file_index} / {len(gatherer)}, Step: {step_index} " \
                               f"| {loss_log} | {metric_log}"
         return description

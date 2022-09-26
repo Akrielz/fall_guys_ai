@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torchmetrics
 from vision_models_playground import models
 
 from metrics.accuracy_complete import AccuracyComplete
@@ -39,7 +38,8 @@ if __name__ == "__main__":
         save_every_n_steps=100,
         model_name='ResNet18',
         consider_last_n_losses=100,
-        consider_min_n_losses=30,
+        consider_min_n_losses=100,
+        apply_augmentations=True,
     )
 
     # Train
