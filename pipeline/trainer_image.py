@@ -205,7 +205,7 @@ class TrainerImage:
 
             if loss_mean < self.best_loss_mean:
                 self.best_loss_mean = loss_mean
-                torch.save(self.model.state_dict(), self.agent_path)
+                torch.save(self.model.state_dict(), self.best_agent_path)
 
     def _do_epoch(
             self,

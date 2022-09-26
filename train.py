@@ -10,7 +10,7 @@ if __name__ == "__main__":
     # Create model
     num_classes = 7
 
-    model = models.classifiers.build_resnet_18(in_channels=4, num_classes=num_classes)
+    model = models.classifiers.build_resnet_50(in_channels=4, num_classes=num_classes)
 
     # Create Optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
@@ -36,7 +36,7 @@ if __name__ == "__main__":
         batch_size=1,
         time_size=4,
         save_every_n_steps=100,
-        model_name='ResNet18',
+        model_name='ResNet50',
         consider_last_n_losses=100,
         consider_min_n_losses=100,
         apply_augmentations=True,
