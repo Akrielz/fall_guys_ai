@@ -272,7 +272,6 @@ class TrainerImage:
             metric_log += f'{metric.__repr__()[:-2]}: {metric.compute():.4f} | '
 
         loss_name = "Loss" if len(self.loss_fn.__repr__()) > 30 else self.loss_fn.__repr__()[:-2]
-
         loss_log = f'{loss_name}: {loss.item():.4f}'
         if self.best_loss_mean != float('inf'):
             loss_log += f' | Best loss: {self.best_loss_mean:.4f}'
