@@ -54,8 +54,19 @@ class DataLoader:
 
         return data
 
-    def iter_epoch_data(self):
-        for file_names in self.iter_epoch_file_names():
+    def __len__(self):
+        len_batch = len(self.file_names) // self.batch_size
+        if len(self.file_names) % self.batch_size != 0:
+            len_batch += 1
+
+        return len_batch
+
+    def iter_epoch_data(self, enumerate_files=False):
+        file_names_iter = self.iter_epoch_file_names()
+        if enumerate_files:
+            file_names_iter = enumerate(file_names_iter)
+
+        for file_batch_index, file_names in file_names_iter:
             lengths = self._get_video_lens(file_names)
             max_len = max(lengths)
 
@@ -103,7 +114,11 @@ class DataLoader:
                 mouse_batch = torch.from_numpy(np.array(mouse_batch))
                 mask_batch = torch.from_numpy(np.array(mask_batch))
 
-                yield video_batch, key_batch, mouse_batch, mask_batch
+                output = (video_batch, key_batch, mouse_batch, mask_batch)
+                if enumerate_files:
+                    output = (file_batch_index, *output)
+
+                yield output
 
     def _load_keys_time_batch_iterator(self, keys):
         for i in range(0, len(keys), self.time_size):

@@ -1,11 +1,15 @@
 import os
-from typing import Optional, Literal
+from copy import deepcopy
+from datetime import datetime
+from typing import Optional, Literal, List
 
 import cv2
 import numpy as np
 import torch.optim
+from colorama import Fore
 from einops import rearrange
 from torch import nn
+from tqdm import tqdm
 
 from pipeline.data_loader import DataLoader
 
@@ -17,10 +21,15 @@ class TrainerImage:
             optimizer: torch.optim.Optimizer,
             loss_fn: nn.Module,
             device: torch.device,
+            metrics: Optional[List[nn.Module]] = None,
             seed: Optional[int] = None,
             data_dir: str = 'data',
             batch_size: int = 1,
             time_size: int = 16,
+            save_every_n_steps: int = 10,
+            consider_last_n_losses: int = 10,
+            consider_min_n_losses: int = 5,
+            model_name: Optional[str] = None,
     ):
         # Save data
         self.model = model
@@ -31,6 +40,9 @@ class TrainerImage:
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.time_size = time_size
+        self.save_every_n_steps = save_every_n_steps
+        self.consider_last_n_losses = consider_last_n_losses
+        self.consider_min_n_losses = consider_min_n_losses
 
         # Move model to device
         self.model.to(self.device)
@@ -42,7 +54,7 @@ class TrainerImage:
             time_size=self.time_size,
             data_dir=train_data_dir,
             seed=self.seed,
-            progress_bar=True
+            progress_bar=False
         )
 
         test_data_dir = os.path.join(self.data_dir, 'test')
@@ -51,7 +63,7 @@ class TrainerImage:
             time_size=self.time_size,
             data_dir=test_data_dir,
             seed=self.seed,
-            progress_bar=True
+            progress_bar=False
         )
 
         val_data_dir = os.path.join(self.data_dir, 'val')
@@ -60,7 +72,7 @@ class TrainerImage:
             time_size=self.time_size,
             data_dir=val_data_dir,
             seed=self.seed,
-            progress_bar=True
+            progress_bar=False
         )
 
         self.gatherers = {
@@ -68,6 +80,38 @@ class TrainerImage:
             'test': test_gatherer,
             'val': val_gatherer,
         }
+
+        if metrics is None:
+            metrics = []
+
+        for metric in metrics:
+            metric.to(self.device)
+
+        # Add metrics
+        self.metrics = {
+            'train': metrics,
+            'test': deepcopy(metrics),
+            'val': deepcopy(metrics),
+        }
+
+        # Init best loss
+        self.best_loss_mean = 1e9
+        self.last_n_losses = []
+
+        # Create save dir for agents
+        if model_name is None:
+            model_name = self.model.__class__.__name__
+
+        self.save_dir = os.path.join("trained_agents", model_name)
+        os.makedirs(self.save_dir, exist_ok=True)
+
+        # Create agent name by date
+        agent_name = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        best_agent_name = f'{agent_name}_best'
+
+        # Create paths vars
+        self.agent_path = os.path.join(self.save_dir, agent_name + '.pt')
+        self.best_agent_path = os.path.join(self.save_dir, best_agent_name + '.pt')
 
     def _collate_fn(
             self,
@@ -121,11 +165,38 @@ class TrainerImage:
 
         return frames, keys, masks
 
+    def _save_best_model(self, loss: torch.Tensor):
+        self.last_n_losses.append(loss.item())
+        if len(self.last_n_losses) > self.consider_last_n_losses:
+            self.last_n_losses.pop(0)
+
+        if len(self.last_n_losses) > self.consider_min_n_losses:
+            loss_mean = sum(self.last_n_losses) / len(self.last_n_losses)
+
+            if loss_mean < self.best_loss_mean:
+                self.best_loss_mean = loss_mean
+                torch.save(self.model.state_dict(), self.agent_path)
+
     def _do_epoch(
             self,
             phase: Literal['train', 'test', 'val'] = 'train',
+            epoch: int = -1,
     ):
-        for frames, keys, _, masks in self.gatherers[phase].iter_epoch_data():
+        # Choose the correct gatherer and metrics
+        gatherer = self.gatherers[phase]
+        metrics = self.metrics[phase]
+
+        # Set model to train or eval mode
+        if phase == 'train':
+            self.model.train()
+            color = Fore.CYAN
+        else:
+            self.model.eval()
+            color = Fore.YELLOW
+
+        gatherer_iter = gatherer.iter_epoch_data(enumerate_files=True)
+        progress_bar = tqdm(gatherer_iter)
+        for step_index, (file_index, frames, keys, _, masks) in enumerate(progress_bar):
             # Apply collate function
             frames, keys, masks = self._collate_fn(frames, keys, masks)
 
@@ -138,17 +209,52 @@ class TrainerImage:
             if phase == 'train':
                 self.optimizer.zero_grad()
 
-            outputs = self.model(frames)
-            loss = self.loss_fn(outputs, keys)
+            predicted = self.model(frames)
+            loss = self.loss_fn(predicted, keys)
 
             if phase == 'train':
                 loss.backward()
                 self.optimizer.step()
+                self._save_best_model(loss)
+
+            for metric in metrics:
+                metric.update(predicted, keys.long())
+
+            description = self._compute_progress_description(
+                color, epoch, step_index, loss, metrics, phase, gatherer, file_index
+            )
+            progress_bar.set_description(description, refresh=False)
+
+            if phase == 'train' and step_index % self.save_every_n_steps == 0:
+                torch.save(self.model.state_dict(), self.agent_path)
+
+    def _compute_progress_description(
+            self,
+            color,
+            epoch,
+            step_index,
+            loss,
+            metrics,
+            phase,
+            gatherer,
+            file_index
+    ):
+        # Update progress bar
+        metric_log = ''
+
+        for metric in metrics:
+            metric_log += f'{metric.__repr__()[:-2]}: {metric.compute():.4f} | '
+
+        loss_name = "Loss" if len(self.loss_fn.__repr__()) > 30 else self.loss_fn.__repr__()[:-2]
+        loss_log = f'{loss_name}: {loss.item():.4f} '
+        description = color + f"{phase} Epoch: {epoch}, File: {file_index} / {len(gatherer)}, Step: {step_index} " \
+                              f"| {loss_log} | {metric_log}"
+        return description
 
     def train(self, num_epochs: int = 10):
         for epoch in range(num_epochs):
-            self._do_epoch('train')
-            self._do_epoch('val')
+            self._do_epoch('train', epoch)
+            self._do_epoch('val', epoch)
         pass
 
     def test(self):
