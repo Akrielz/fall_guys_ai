@@ -141,14 +141,20 @@ def load_video(file_name: str):
     return np.array(frames)
 
 
-def load_video_iterator(file_name: str):
+def load_video_iterator(file_name: str, mask: Optional[np.array] = None):
     cap = cv2.VideoCapture(file_name)
 
+    i = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
 
+        if mask is not None and mask[i] == 0:
+            i += 1
+            continue
+
+        i += 1
         yield frame
 
     cap.release()
