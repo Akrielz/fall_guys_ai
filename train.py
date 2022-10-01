@@ -17,6 +17,9 @@ if __name__ == "__main__":
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-4)
 
+    # Add lr scheduler
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+
     # Create Loss
     loss_fn = nn.BCEWithLogitsLoss()
 
@@ -43,7 +46,8 @@ if __name__ == "__main__":
         consider_min_n_losses=100,
         apply_augmentations=True,
         balanced_data=True,
+        scheduler=scheduler,
     )
 
     # Train
-    trainer.train(num_epochs=10)
+    trainer.train(num_epochs=20, run_validation_too=False)

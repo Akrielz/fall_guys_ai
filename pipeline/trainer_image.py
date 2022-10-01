@@ -10,7 +10,6 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
 from tqdm import tqdm
-from vision_models_playground import utility
 from vision_models_playground.models.augmenters import Augmeneter
 
 from image_utils.image_handler import threshold_frame
@@ -35,6 +34,7 @@ class TrainerImage:
             model_name: Optional[str] = None,
             apply_augmentations: bool = False,
             balanced_data: bool = False,
+            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
     ):
         # Save data
         self.model = model
@@ -48,6 +48,7 @@ class TrainerImage:
         self.save_every_n_steps = save_every_n_steps
         self.consider_last_n_losses = consider_last_n_losses
         self.consider_min_n_losses = consider_min_n_losses
+        self.scheduler = scheduler
 
         # Move model to device
         self.model.to(self.device)
@@ -277,15 +278,18 @@ class TrainerImage:
                               f"| {loss_log} | {metric_log}"
         return description
 
-    def train(self, num_epochs: int = 10, run_val_too: bool = True):
+    def train(self, num_epochs: int = 10, run_validation_too: bool = True):
         for epoch in range(num_epochs):
             self._do_epoch('train', epoch)
 
-            if not run_val_too:
+            if not run_validation_too:
                 continue
 
             with torch.no_grad():
                 self._do_epoch('val', epoch)
+
+            if self.scheduler is not None:
+                self.scheduler.step()
 
     @torch.no_grad()
     def test(self):
