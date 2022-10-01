@@ -3,7 +3,6 @@ from copy import deepcopy
 from datetime import datetime
 from typing import Optional, Literal, List
 
-import cv2
 import numpy as np
 import torch.optim
 from colorama import Fore
@@ -13,6 +12,7 @@ from torch import nn
 from tqdm import tqdm
 from vision_models_playground.models.augmenters import Augmeneter
 
+from image_utils.image_handler import threshold_frame
 from pipeline.data_loader import DataLoader
 
 
@@ -156,12 +156,6 @@ class TrainerImage:
             masks = torch.cat([masks, masks], dim=0)
 
         # Get black and white frames
-        def threshold_frame(frame: np.ndarray):
-            black_white_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-            segmented_frame = cv2.Canny(black_white_frame, threshold1=119, threshold2=250)
-
-            return segmented_frame
-
         frames_segmented = torch.from_numpy(np.array(list(map(threshold_frame, frames.numpy()))))
         frames_segmented = frames_segmented.unsqueeze(-1)
         frames = torch.cat([frames, frames_segmented], dim=-1)
@@ -283,8 +277,10 @@ class TrainerImage:
     def train(self, num_epochs: int = 10):
         for epoch in range(num_epochs):
             self._do_epoch('train', epoch)
-            self._do_epoch('val', epoch)
-        pass
 
+            with torch.no_grad():
+                self._do_epoch('val', epoch)
+
+    @torch.no_grad()
     def test(self):
         self._do_epoch('test')

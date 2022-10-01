@@ -193,6 +193,7 @@ def record_data_using_stream(
         if start_recording_key and not recording:
             print("Started recording")
             print_current_time()
+
             recording = True
 
             file_name = get_temporary_name(directory, return_full_path=True)

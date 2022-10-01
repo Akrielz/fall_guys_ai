@@ -13,7 +13,7 @@ if __name__ == "__main__":
     model = models.classifiers.build_resnet_50(in_channels=4, num_classes=num_classes)
 
     # Create Optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
     # Create Loss
     loss_fn = nn.BCEWithLogitsLoss()

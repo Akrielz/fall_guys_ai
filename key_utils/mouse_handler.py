@@ -41,3 +41,19 @@ def move_mouse_relative(x, y):
 
 def move_mouse_absolute(x, y):
     wapi.SetCursorPos((x, y))
+
+
+def press_left_click():
+    wapi.mouse_event(win32con.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+
+
+def release_left_click():
+    wapi.mouse_event(win32con.MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+
+
+def press_right_click():
+    wapi.mouse_event(win32con.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0)
+
+
+def release_right_click():
+    wapi.mouse_event(win32con.MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0)
