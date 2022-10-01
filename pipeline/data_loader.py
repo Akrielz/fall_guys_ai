@@ -1,5 +1,5 @@
 import os
-from typing import Optional
+from typing import Optional, List
 
 import numpy as np
 import torch
@@ -16,13 +16,18 @@ class DataLoader:
             time_size: int,
             data_dir: str,
             seed: Optional[int] = None,
-            progress_bar=False
+            progress_bar: bool = False,
+            balanced_data: bool = False
     ):
         self.batch_size = batch_size
         self.time_size = time_size
         self.data_dir = data_dir
         self.seed = seed
         self.progress_bar = progress_bar
+        self.balanced_data = balanced_data
+
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
         self.file_names = self._read_file_names()
 
@@ -30,9 +35,6 @@ class DataLoader:
         return [file_name[:-4] for file_name in os.listdir(self.data_dir) if file_name.endswith(".avi")]
 
     def iter_epoch_file_names(self):
-        if self.seed is not None:
-            np.random.seed(self.seed)
-
         permutation = np.random.permutation(len(self.file_names))
 
         file_len_iter = range(0, len(self.file_names), self.batch_size)
@@ -61,20 +63,33 @@ class DataLoader:
 
         return len_batch
 
-    def iter_epoch_data(self, enumerate_files=False):
+    def iter_epoch_data(
+            self,
+            enumerate_files: bool = False,
+            balanced_data: Optional[bool] = None
+    ):
+        if balanced_data is None:
+            balanced_data = self.balanced_data
+
         file_names_iter = self.iter_epoch_file_names()
         if enumerate_files:
             file_names_iter = enumerate(file_names_iter)
 
-        for file_batch_index, file_names in file_names_iter:
-            lengths = self._get_video_lens(file_names)
+        for file_names_tuple in file_names_iter:
+
+            if enumerate_files:
+                file_batch_index, file_names = file_names_tuple
+            else:
+                file_names = file_names_tuple
+
+            lengths = self._get_keys_lens(file_names, balanced_data=balanced_data)
             max_len = max(lengths)
 
             video_shape = None
             key_shape = None
             mouse_shape = None
 
-            generators = [self._iter_data(file_name) for file_name in file_names]
+            generators = [self._iter_data(file_name, balanced_data=balanced_data) for file_name in file_names]
 
             for time in range(0, max_len, self.time_size):
                 video_batch = []
@@ -120,34 +135,82 @@ class DataLoader:
 
                 yield output
 
-    def _load_keys_time_batch_iterator(self, keys):
-        for i in range(0, len(keys), self.time_size):
-            sub_batch = keys[i:i + self.time_size]
+    def _load_keys_time_batch_iterator(
+            self,
+            keys,
+            time_size: int = None,
+            mask: Optional[np.ndarray] = None
+    ):
+        if time_size is None:
+            time_size = self.time_size
 
-            buttons_batch = []
-            mouse_batch = []
-            for buttons, mouse in sub_batch:
-                buttons_batch.append(buttons)
-                mouse_batch.append(mouse)
+        buttons_batch, mouse_batch = [], []
+        for i, (buttons, mouse) in enumerate(keys):
+            if mask is not None and not mask[i]:
+                continue
 
+            buttons_batch.append(buttons)
+            mouse_batch.append(mouse)
+
+            if len(buttons_batch) == time_size:
+                yield np.array(buttons_batch), np.array(mouse_batch)
+                buttons_batch, mouse_batch = [], []
+
+        if len(buttons_batch) > 0:
             yield np.array(buttons_batch), np.array(mouse_batch)
 
-    def _get_video_lens(self, file_names):
+    def _get_video_lens(self, file_names: List[str]):
         return [load_video_len(os.path.join(self.data_dir, f"{file_name}.avi")) for file_name in file_names]
 
-    def _iter_data(self, file_name):
+    def _get_keys_lens(self, file_names: List[str], balanced_data: bool = False):
+        keys_batch = [load_data_general(os.path.join(self.data_dir, f"{file_name}.keys")) for file_name in file_names]
+        if not balanced_data:
+            return [len(keys) for keys in keys_batch]
+
+        mask_batch = [self._balance_data_mask(keys) for keys in keys_batch]
+        return [np.sum(mask) for mask in mask_batch]
+
+    @staticmethod
+    def _balance_data_mask(keys):
+        mask = np.zeros(len(keys), dtype=bool)
+        mask[0] = True
+        for i in range(1, len(keys)):
+            if keys[i][0] != keys[i - 1][0]:
+                mask[i] = True
+
+        return mask
+
+    def _iter_data(self, file_name: str, time_size: int = None, balanced_data: bool = False):
+        # If time_size is None, use self.time_size
+        if time_size is None:
+            time_size = self.time_size
+
+        # Compute file path
         file_path = os.path.join(self.data_dir, file_name)
 
-        video = load_video_batch_iterator(f"{file_path}.avi", batch_size=self.time_size)
-
+        # Load keys
         keys = load_data_general(f"{file_path}.keys")
-        keys = self._load_keys_time_batch_iterator(keys)
 
+        # Apply balancing if needed
+        mask = None
+        if balanced_data:
+            mask = self._balance_data_mask(keys)
+
+        keys = self._load_keys_time_batch_iterator(keys, time_size=time_size, mask=mask)
+
+        # Load video
+        video = load_video_batch_iterator(f"{file_path}.avi", batch_size=time_size, mask=mask)
+
+        # Create a generator that yields the data
         for video_time_batch, (key_time_batch, mouse_time_batch) in zip(video, keys):
             yield video_time_batch, key_time_batch, mouse_time_batch
 
 
 if __name__ == "__main__":
-    gatherer = DataLoader(batch_size=1, time_size=1, data_dir="data/train", seed=0, progress_bar=True)
-    for videos, keys, mouse, masks in (gatherer.iter_epoch_data()):
+    gatherer = DataLoader(
+        batch_size=1, time_size=8,
+        data_dir="data/train", seed=0,
+        progress_bar=True, balanced_data=True
+    )
+    for videos, keys, mouse, masks in gatherer.iter_epoch_data():
         pass

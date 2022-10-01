@@ -155,10 +155,17 @@ def load_video_iterator(file_name: str):
     return
 
 
-def load_video_batch_iterator(file_name: str, batch_size=1):
+def load_video_batch_iterator(
+        file_name: str,
+        batch_size: int = 1,
+        mask: Optional[np.array] = None
+):
     frames = []
 
-    for frame in load_video_iterator(file_name):
+    for i, frame in enumerate(load_video_iterator(file_name)):
+        if mask is not None and mask[i] == 0:
+            continue
+
         frames.append(frame)
 
         if len(frames) == batch_size:
@@ -166,8 +173,6 @@ def load_video_batch_iterator(file_name: str, batch_size=1):
             frames = []
 
     yield np.array(frames)
-
-    return
 
 
 def load_video_len(file_name: str):

@@ -10,6 +10,7 @@ from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
 from tqdm import tqdm
+from vision_models_playground import utility
 from vision_models_playground.models.augmenters import Augmeneter
 
 from image_utils.image_handler import threshold_frame
@@ -33,6 +34,7 @@ class TrainerImage:
             consider_min_n_losses: int = 5,
             model_name: Optional[str] = None,
             apply_augmentations: bool = False,
+            balanced_data: bool = False,
     ):
         # Save data
         self.model = model
@@ -57,7 +59,8 @@ class TrainerImage:
             time_size=self.time_size,
             data_dir=train_data_dir,
             seed=self.seed,
-            progress_bar=False
+            progress_bar=False,
+            balanced_data=balanced_data,
         )
 
         test_data_dir = os.path.join(self.data_dir, 'test')
@@ -223,7 +226,7 @@ class TrainerImage:
         for step_index, (file_index, frames, keys, _, masks) in enumerate(progress_bar):
             # Apply collate function
             frames, keys, masks = self._collate_fn_cpu(frames, keys, masks)
-            frames, keys, mask = self._collate_fn_device(frames, keys, masks)
+            frames, keys, masks = self._collate_fn_device(frames, keys, masks)
 
             # Forward pass
             if phase == 'train':

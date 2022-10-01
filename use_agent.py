@@ -26,6 +26,9 @@ def load_agent(
     # Load model
     model.load_state_dict(weights)
 
+    # Put model in evaluation mode
+    model.eval()
+
     return model
 
 
@@ -104,7 +107,7 @@ def use_agent_image(
             recording = True
 
         elif stop_recording_key and recording:
-            print("Stopping Agent")
+            print("Agent Stopped")
             print_current_time()
             recording = False
 
