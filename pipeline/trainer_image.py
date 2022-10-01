@@ -277,9 +277,12 @@ class TrainerImage:
                               f"| {loss_log} | {metric_log}"
         return description
 
-    def train(self, num_epochs: int = 10):
+    def train(self, num_epochs: int = 10, run_val_too: bool = True):
         for epoch in range(num_epochs):
             self._do_epoch('train', epoch)
+
+            if not run_val_too:
+                continue
 
             with torch.no_grad():
                 self._do_epoch('val', epoch)
