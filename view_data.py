@@ -7,7 +7,7 @@ if __name__ == "__main__":
     keys = load_data_general(f"{file_name}.keys")
 
     # mask = None
-    mask = DataLoader._balance_data_mask(keys)
+    mask = DataLoader.balance_data_mask(keys)
 
     video = load_video_iterator(file_name=f"{file_name}.avi", mask=mask)
 

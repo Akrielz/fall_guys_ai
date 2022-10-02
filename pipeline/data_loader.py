@@ -167,11 +167,11 @@ class DataLoader:
         if not balanced_data:
             return [len(keys) for keys in keys_batch]
 
-        mask_batch = [self._balance_data_mask(keys) for keys in keys_batch]
+        mask_batch = [self.balance_data_mask(keys) for keys in keys_batch]
         return [np.sum(mask) for mask in mask_batch]
 
     @staticmethod
-    def _balance_data_mask(keys):
+    def balance_data_mask(keys):
         mask = np.zeros(len(keys), dtype=bool)
         mask[0] = True
         for i in range(1, len(keys)):
@@ -194,7 +194,7 @@ class DataLoader:
         # Apply balancing if needed
         mask = None
         if balanced_data:
-            mask = self._balance_data_mask(keys)
+            mask = self.balance_data_mask(keys)
 
         keys = self._load_keys_time_batch_iterator(keys, time_size=time_size, mask=mask)
 
