@@ -6,7 +6,7 @@ from einops import rearrange
 from torch import nn
 from vision_models_playground import models
 
-from image_utils.image_handler import get_screenshot_mss_api, threshold_frame, show_image, image_bgr_to_rgb
+from image_utils.image_handler import get_screenshot_mss_api, threshold_frame, image_bgr_to_rgb
 from key_utils.input_check import input_check
 from key_utils.press_keys import keyboard_keys, press_keys
 from record_data import print_current_time
@@ -57,7 +57,7 @@ def get_agent_action(agent: nn.Module, frame: np.array, device: torch.device = "
 
     # Apply sigmoid
     actions = torch.sigmoid(actions)
-    actions = actions >= 0.5
+    actions = actions >= 0.3
 
     return actions[0]
 
@@ -93,7 +93,7 @@ def use_agent_image(
 
     while True:
         keys = input_check()
-        frame = image_bgr_to_rgb(get_screenshot_mss_api(x1, y1, x2, y2, used_width, used_height)) if recording else None
+        frame = get_screenshot_mss_api(x1, y1, x2, y2, used_width, used_height) if recording else None
 
         start_recording_key = keys[0]
         stop_recording_key = keys[1]

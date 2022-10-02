@@ -142,7 +142,7 @@ def get_screenshot_win_api(
 
 
 def threshold_frame(frame: np.ndarray):
-    black_white_frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+    black_white_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     segmented_frame = cv2.Canny(black_white_frame, threshold1=119, threshold2=250)
 
     return segmented_frame
@@ -150,5 +150,6 @@ def threshold_frame(frame: np.ndarray):
 
 if __name__ == "__main__":
     img = get_screenshot(0, 0, 1920, 1080, 1920, 1080, api='mss')
-    img = image_bgr_to_rgb(img)
+    img = threshold_frame(img)
+    # img = image_bgr_to_rgb(img)
     show_image(img)
