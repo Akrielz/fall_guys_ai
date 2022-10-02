@@ -37,7 +37,7 @@ if __name__ == "__main__":
         device=torch.device('cuda'),
         metrics=metrics,
         seed=0,
-        data_dir='data',
+        data_dir='data/door_dash',
         batch_size=1,
         time_size=4,
         save_every_n_steps=100,
@@ -50,4 +50,4 @@ if __name__ == "__main__":
     )
 
     # Train
-    trainer.train(num_epochs=20, run_validation_too=False)
+    trainer.train(num_epochs=20)

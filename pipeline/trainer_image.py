@@ -73,19 +73,9 @@ class TrainerImage:
             progress_bar=False
         )
 
-        val_data_dir = os.path.join(self.data_dir, 'val')
-        val_gatherer = DataLoader(
-            batch_size=self.batch_size,
-            time_size=self.time_size,
-            data_dir=val_data_dir,
-            seed=self.seed,
-            progress_bar=False
-        )
-
         self.gatherers = {
             'train': train_gatherer,
             'test': test_gatherer,
-            'val': val_gatherer,
         }
 
         if metrics is None:
@@ -98,7 +88,6 @@ class TrainerImage:
         self.metrics = {
             'train': metrics,
             'test': deepcopy(metrics),
-            'val': deepcopy(metrics),
         }
 
         # Init best loss
@@ -109,7 +98,7 @@ class TrainerImage:
         if model_name is None:
             model_name = self.model.__class__.__name__
 
-        self.save_dir = os.path.join("trained_agents", model_name)
+        self.save_dir = os.path.join("trained_agents", data_dir, model_name)
         os.makedirs(self.save_dir, exist_ok=True)
 
         # Create agent name by date
@@ -207,7 +196,7 @@ class TrainerImage:
 
     def _do_epoch(
             self,
-            phase: Literal['train', 'test', 'val'] = 'train',
+            phase: Literal['train', 'test'] = 'train',
             epoch: int = -1,
     ):
         # Choose the correct gatherer and metrics
@@ -278,15 +267,9 @@ class TrainerImage:
                               f"| {loss_log} | {metric_log}"
         return description
 
-    def train(self, num_epochs: int = 10, run_validation_too: bool = True):
+    def train(self, num_epochs: int = 10):
         for epoch in range(num_epochs):
             self._do_epoch('train', epoch)
-
-            if not run_validation_too:
-                continue
-
-            with torch.no_grad():
-                self._do_epoch('val', epoch)
 
             if self.scheduler is not None:
                 self.scheduler.step()

@@ -209,7 +209,7 @@ class DataLoader:
 if __name__ == "__main__":
     gatherer = DataLoader(
         batch_size=1, time_size=8,
-        data_dir="data/train", seed=0,
+        data_dir="data/big_fans/test", seed=0,
         progress_bar=True, balanced_data=True
     )
     for videos, keys, mouse, masks in gatherer.iter_epoch_data():

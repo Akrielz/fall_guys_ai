@@ -3,7 +3,7 @@ from image_utils.video_handler import view_video, load_video_iterator
 from pipeline.data_loader import DataLoader
 
 if __name__ == "__main__":
-    file_name = "data/test/tmp5f0zshs6"
+    file_name = "data/train/tmp3bonsbut"
     keys = load_data_general(f"{file_name}.keys")
 
     # mask = None
