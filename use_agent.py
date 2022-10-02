@@ -6,7 +6,7 @@ from einops import rearrange
 from torch import nn
 from vision_models_playground import models
 
-from image_utils.image_handler import get_screenshot_mss_api, threshold_frame
+from image_utils.image_handler import get_screenshot_mss_api, threshold_frame, show_image, image_bgr_to_rgb
 from key_utils.input_check import input_check
 from key_utils.press_keys import keyboard_keys, press_keys
 from record_data import print_current_time
@@ -25,6 +25,7 @@ def load_agent(
 
     # Load model
     model.load_state_dict(weights)
+    # del weights
 
     # Put model in evaluation mode
     model.eval()
@@ -55,7 +56,8 @@ def get_agent_action(agent: nn.Module, frame: np.array, device: torch.device = "
     actions = agent(frame)
 
     # Apply sigmoid
-    actions = torch.sigmoid(actions) > 0.5
+    actions = torch.sigmoid(actions)
+    actions = actions >= 0.5
 
     return actions[0]
 
@@ -91,7 +93,7 @@ def use_agent_image(
 
     while True:
         keys = input_check()
-        frame = get_screenshot_mss_api(x1, y1, x2, y2, used_width, used_height) if recording else None
+        frame = image_bgr_to_rgb(get_screenshot_mss_api(x1, y1, x2, y2, used_width, used_height)) if recording else None
 
         start_recording_key = keys[0]
         stop_recording_key = keys[1]
@@ -110,9 +112,12 @@ def use_agent_image(
             print("Agent Stopped")
             print_current_time()
             recording = False
+            press_keys(keyboard_keys, [False] * (len(keyboard_keys) + 2))
 
 
 if __name__ == "__main__":
-    agent_path = "trained_agents/ResNet50/2022-09-27_02-12-36_best.pt"
-    model = models.classifiers.build_resnet_50(in_channels=4, num_classes=7)
-    use_agent_image(agent_path, model, torch.device('cuda'))
+    agent_path = "trained_agents/CvT13/2022-10-02_00-55-30.pt"
+    # agent_path = "trained_agents/ResNet50/2022-09-27_02-12-36_best.pt"
+    model = models.classifiers.build_cvt_13(num_classes=7, in_channels=4)
+    # model = models.classifiers.build_resnet_50(num_classes=7, in_channels=4)
+    use_agent_image(agent_path, model, torch.device('cuda'), model_width=384, model_height=216)

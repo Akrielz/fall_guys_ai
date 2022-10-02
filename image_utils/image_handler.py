@@ -95,7 +95,7 @@ def get_screenshot_mss_api(
     return img_np
 
 
-def image_rgb_to_bgr(img: np.array):
+def image_bgr_to_rgb(img: np.array):
     return np.concatenate([img[:, :, 2:3], img[:, :, 1:2], img[:, :, 0:1]], -1)  # RGB
 
 
@@ -150,4 +150,5 @@ def threshold_frame(frame: np.ndarray):
 
 if __name__ == "__main__":
     img = get_screenshot(0, 0, 1920, 1080, 1920, 1080, api='mss')
+    img = image_bgr_to_rgb(img)
     show_image(img)
