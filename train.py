@@ -6,6 +6,7 @@ from vision_models_playground import models
 
 from metrics.accuracy_complete import AccuracyComplete
 from metrics.accuracy_partial import AccuracyPartial
+from model.image.resnet_50 import build_resnet_50
 from pipeline.optimizer import get_optimizer
 from pipeline.positive_weights import PositiveWeightCalculator
 from pipeline.trainer_image import TrainerImage
@@ -19,7 +20,10 @@ if __name__ == "__main__":
     device = torch.device('cuda')
 
     # Create model
-    model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
+    # model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
+
+    # Create ResNet50 pretrained model from torchvision
+    model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
 
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-3)
@@ -31,6 +35,7 @@ if __name__ == "__main__":
     train_data_dir = os.path.join(data_dir, 'train')
     pos_weight = PositiveWeightCalculator(balanced_data, train_data_dir, num_classes).calculate()
     pos_weight = pos_weight.to(device)
+
     loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
 
     # Create metrics
@@ -51,12 +56,13 @@ if __name__ == "__main__":
         batch_size=1,
         time_size=4,
         save_every_n_steps=100,
-        model_name='CvT13',
+        model_name='ResNet50_pretrained',
         consider_last_n_losses=100,
         consider_min_n_losses=100,
         apply_augmentations=True,
         balanced_data=balanced_data,
         scheduler=scheduler,
+        resize_image_size=(224, 224),
     )
 
     # Train

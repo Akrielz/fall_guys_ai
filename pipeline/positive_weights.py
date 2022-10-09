@@ -13,12 +13,15 @@ class PositiveWeightCalculator:
             self,
             balanced_data: bool = False,
             data_dir: str = 'data/door_dash/train',
-            num_classes: int = 7
+            num_classes: int = 7,
+            min_max_factor: Optional[float] = 3.0,
     ):
         self.balanced_data = balanced_data
         self.data_dir = data_dir
         self.num_classes = num_classes
         self.eps = 1e-6
+        self.min_value = 1.0 / min_max_factor
+        self.max_value = min_max_factor
 
     def __call__(self):
         self.key_files = self._read_file_names()
@@ -39,6 +42,10 @@ class PositiveWeightCalculator:
 
         neg_count = total_num - pos_count
         pos_weights = neg_count / (pos_count + self.eps)
+
+        if self.min_value is not None:
+            pos_weights = np.clip(pos_weights, self.min_value, self.max_value)
+
         return torch.from_numpy(pos_weights)
 
     def _load_buttons(

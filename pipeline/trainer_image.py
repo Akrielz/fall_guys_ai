@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 from datetime import datetime
-from typing import Optional, Literal, List
+from typing import Optional, Literal, List, Tuple
 
 import numpy as np
 import torch.optim
@@ -9,6 +9,8 @@ from colorama import Fore
 from einops import rearrange
 from einops.layers.torch import Rearrange
 from torch import nn
+from torch.utils.tensorboard import SummaryWriter
+from torchvision.transforms import Resize
 from tqdm import tqdm
 from vision_models_playground.models.augmenters import Augmeneter
 
@@ -35,7 +37,11 @@ class TrainerImage:
             apply_augmentations: bool = False,
             balanced_data: bool = False,
             scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+            original_image_size: Tuple[int, int] = (216, 384),
+            resize_image_size: Optional[Tuple[int, int]] = None,
     ):
+        data_dir = os.path.normpath(data_dir)
+
         # Save data
         self.model = model
         self.optimizer = optimizer
@@ -49,6 +55,8 @@ class TrainerImage:
         self.consider_last_n_losses = consider_last_n_losses
         self.consider_min_n_losses = consider_min_n_losses
         self.scheduler = scheduler
+        self.original_image_size = original_image_size
+        self.resize_image_size = resize_image_size
 
         # Move model to device
         self.model.to(self.device)
@@ -98,22 +106,38 @@ class TrainerImage:
         if model_name is None:
             model_name = self.model.__class__.__name__
 
-        self.save_dir = os.path.join("trained_agents", data_dir, model_name)
+        data_dir_format = data_dir
+        if data_dir_format.startswith('data') and len(data_dir_format) > 4:
+            data_dir_format = data_dir_format[5:]
+
+        current_date = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+        self.save_dir = os.path.join("trained_agents", data_dir_format, model_name, current_date)
         os.makedirs(self.save_dir, exist_ok=True)
 
         # Create agent name by date
-        agent_name = f'{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
-        best_agent_name = f'{agent_name}_best'
+        last_agent_name = "model_last"
+        best_agent_name = "model_best"
+
+        # Create tensorboard writer
+        self.writer = SummaryWriter(log_dir=self.save_dir)
 
         # Create paths vars
-        self.agent_path = os.path.join(self.save_dir, agent_name + '.pt')
+        self.last_agent_path = os.path.join(self.save_dir, last_agent_name + '.pt')
         self.best_agent_path = os.path.join(self.save_dir, best_agent_name + '.pt')
 
         # Create image augmenter
+        used_image_size = original_image_size if resize_image_size is None else resize_image_size
+
+        self.rescale_layer = nn.Sequential(
+            Rearrange('b h w c -> b c h w'),
+            Resize(used_image_size),
+            Rearrange('b c h w -> b h w c')
+        ) if resize_image_size is not None else None
+
         self.image_augmenter = nn.Sequential(
             Rearrange('b h w c -> b c h w'),
             Augmeneter(
-                image_size=(216, 384), background_color=1.0, rotation_angles=15
+                image_size=used_image_size, background_color=1.0, rotation_angles=15
             ),
             Rearrange('b c h w -> b h w c')
         ) if apply_augmentations else None
@@ -123,7 +147,8 @@ class TrainerImage:
             self,
             frames: torch.Tensor,
             keys: torch.Tensor,
-            masks: torch.Tensor
+            masks: torch.Tensor,
+            phase: Literal['train', 'test'],
     ):
         """
         Collate function for DataLoader
@@ -141,8 +166,12 @@ class TrainerImage:
         frames = frames[masks]
         keys = keys[masks]
 
+        # Apply rescale layer
+        if self.rescale_layer is not None:
+            frames = self.rescale_layer(frames)
+
         # Apply augmentations
-        if self.image_augmenter is not None:
+        if self.image_augmenter is not None and phase == 'train':
             frames_augmented = self.image_augmenter(frames)
             frames = torch.cat([frames, frames_augmented], dim=0)
             keys = torch.cat([keys, keys], dim=0)
@@ -215,7 +244,7 @@ class TrainerImage:
         progress_bar = tqdm(gatherer_iter)
         for step_index, (file_index, frames, keys, _, masks) in enumerate(progress_bar):
             # Apply collate function
-            frames, keys, masks = self._collate_fn_cpu(frames, keys, masks)
+            frames, keys, masks = self._collate_fn_cpu(frames, keys, masks, phase)
             frames, keys, masks = self._collate_fn_device(frames, keys, masks)
 
             # Forward pass
@@ -239,7 +268,7 @@ class TrainerImage:
             progress_bar.set_description(description, refresh=False)
 
             if phase == 'train' and step_index % self.save_every_n_steps == 0:
-                torch.save(self.model.state_dict(), self.agent_path)
+                torch.save(self.model.state_dict(), self.last_agent_path)
 
     def _compute_progress_description(
             self,
@@ -255,8 +284,10 @@ class TrainerImage:
         # Update progress bar
         metric_log = ''
 
+        metric_values = []
         for metric in metrics:
-            metric_log += f'{metric.__repr__()[:-2]}: {metric.compute():.4f} | '
+            metric_values.append(metric.compute())
+            metric_log += f'{metric.__repr__()[:-2]}: {metric_values[-1]:.4f} | '
 
         loss_name = "Loss" if len(self.loss_fn.__repr__()) > 30 else self.loss_fn.__repr__()[:-2]
         loss_log = f'{loss_name}: {loss.item():.4f}'
@@ -265,6 +296,15 @@ class TrainerImage:
 
         description = color + f"{phase} Epoch: {epoch}, File: {file_index} / {len(gatherer)}, Step: {step_index} " \
                               f"| {loss_log} | {metric_log}"
+
+        # Add the progress to the tensorboard writter
+        self.writer.add_scalar(f'{phase}/loss', loss.item(), step_index)
+        for metric_value, metric in zip(metric_values, metrics):
+            self.writer.add_scalar(f'{phase}/{metric.__repr__()[:-2]}', metric_value, step_index)
+
+        if self.best_loss_mean != float('inf'):
+            self.writer.add_scalar(f'{phase}/best_loss', self.best_loss_mean, step_index)
+
         return description
 
     def train(self, num_epochs: int = 10):
