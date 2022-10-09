@@ -307,12 +307,16 @@ class TrainerImage:
 
         return description
 
-    def train(self, num_epochs: int = 10):
+    def train(self, num_epochs: int = 10, run_test_too: bool = False):
         for epoch in range(num_epochs):
             self._do_epoch('train', epoch)
 
             if self.scheduler is not None:
                 self.scheduler.step()
+
+            if run_test_too:
+                with torch.no_grad():
+                    self._do_epoch('test', epoch)
 
     @torch.no_grad()
     def test(self):

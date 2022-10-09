@@ -16,7 +16,7 @@ if __name__ == "__main__":
     num_classes = 7
     in_channels = 4
     balanced_data = True
-    data_dir = 'data/hex_a_gone'
+    data_dir = 'data/door_dash'
     device = torch.device('cuda')
 
     # Create model
