@@ -66,4 +66,4 @@ if __name__ == "__main__":
     )
 
     # Train
-    trainer.train(num_epochs=20)
+    trainer.train(num_epochs=20, run_test_too=True)
