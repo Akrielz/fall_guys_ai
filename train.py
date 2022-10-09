@@ -56,7 +56,7 @@ if __name__ == "__main__":
         batch_size=1,
         time_size=4,
         save_every_n_steps=100,
-        model_name='ResNet50_pretrained',
+        model_name='resnet50_pretrained',
         consider_last_n_losses=100,
         consider_min_n_losses=100,
         apply_augmentations=True,
