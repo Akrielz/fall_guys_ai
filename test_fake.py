@@ -2,11 +2,10 @@ import os
 
 import torch
 import torch.nn as nn
-from vision_models_playground import models
 
 from metrics.accuracy_complete import AccuracyComplete
 from metrics.accuracy_partial import AccuracyPartial
-from model.image.resnet_50 import build_resnet_50
+from model.image.fake import FakeModel
 from pipeline.optimizer import get_optimizer
 from pipeline.positive_weights import PositiveWeightCalculator
 from pipeline.trainer_image import TrainerImage
@@ -19,11 +18,9 @@ if __name__ == "__main__":
     data_dir = 'data/hex_a_gone'
     device = torch.device('cuda')
 
-    # Create model
-    # model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
-
-    # Create ResNet50 pretrained model from torchvision
-    model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
+    # Create FakeModel
+    output = torch.tensor([0.0, 1000.0, 0.0, 0.0, 0.0, 0.0, 0.0]).to(device)
+    model = FakeModel(output=output)
 
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-3)
@@ -56,7 +53,7 @@ if __name__ == "__main__":
         batch_size=1,
         time_size=4,
         save_every_n_steps=100,
-        model_name='resnet50_pretrained',
+        model_name='fake',
         consider_last_n_losses=100,
         consider_min_n_losses=100,
         apply_augmentations=True,
@@ -66,4 +63,5 @@ if __name__ == "__main__":
     )
 
     # Train
-    trainer.train(num_epochs=20)
+    trainer.test()
+
