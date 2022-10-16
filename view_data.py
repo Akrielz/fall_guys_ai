@@ -3,11 +3,11 @@ from image_utils.video_handler import view_video, load_video_iterator
 from pipeline.data_loader import DataLoader
 
 if __name__ == "__main__":
-    file_name = "data/train/tmp3bonsbut"
+    file_name = "data/big_fans/train/tmpa8737nwg"
     keys = load_data_general(f"{file_name}.keys")
 
-    # mask = None
-    mask = DataLoader.balance_data_mask(keys)
+    mask = None
+    # mask = DataLoader.balance_data_mask(keys)
 
     video = load_video_iterator(file_name=f"{file_name}.avi", mask=mask)
 
