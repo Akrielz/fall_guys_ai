@@ -7,6 +7,7 @@ import numpy as np
 import torch
 from einops.layers.torch import Rearrange
 from torch import nn
+from tqdm import tqdm
 
 from draw_utils.keyboard import draw_keyboard
 from draw_utils.mouse import draw_mouse
@@ -205,16 +206,26 @@ def load_video_len_augmented(file_name: str):
     return total_len
 
 
+def augment_image(frame: np.array, augmenter: nn.Module):
+    frame = torch.from_numpy(frame).float() / 255
+    frame = augmenter(frame)
+    frame = frame.numpy()
+    frame *= 255
+    frame = frame.astype(np.uint8)
+    return frame
+
+
 def load_images_augmented_iterator(
         file_name: str,
         permutation: Optional[np.array] = None,
-        random_permutation: bool = False
+        random_permutation: bool = False,
+        return_augmented: bool = False,
 ):
     augmenter = nn.Sequential(
         Rearrange("h w c-> 1 c h w"),
         WeakAugmeneter(),
         Rearrange("1 c h w -> h w c"),
-    )
+    ) if return_augmented else None
 
     # compute lens
     total_len = load_video_len_augmented(file_name)
@@ -247,24 +258,17 @@ def load_images_augmented_iterator(
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_reference)
         _, frame = cap.read()
         if index < video_len:
-            yield frame
+            yield frame, False
         else:
-            frame = torch.from_numpy(frame).float() / 255
-            frame = augmenter(frame)
-            frame = frame.numpy()
-            frame *= 255
-            frame = frame.astype(np.uint8)
-            yield frame
+            if return_augmented:
+                frame = augment_image(frame, augmenter), True
+            yield frame, True
 
 
 if __name__ == "__main__":
     images_iter = load_images_augmented_iterator("data/big_shots/train/tmp0inn4dtw.avi", random_permutation=True)
-    for i, image in enumerate(images_iter):
-        cv2.imshow("image", image)
 
-        time.sleep(1 / 4)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-
+    start_time = time.time()
+    for image in tqdm(images_iter):
+        pass
 

@@ -7,9 +7,10 @@ from tqdm import tqdm
 
 from data_utils.data_handler import load_data_general
 from image_utils.video_handler import load_video_batch_iterator, load_video_len
+from pipeline.data_loader import DataLoader
 
 
-class VideoDataLoader:
+class VideoDataLoader(DataLoader):
     def __init__(
             self,
             batch_size: int,
@@ -19,20 +20,20 @@ class VideoDataLoader:
             progress_bar: bool = False,
             balanced_data: bool = False
     ):
-        self.batch_size = batch_size
+        # init upper
+        super().__init__(batch_size, data_dir, seed, progress_bar)
+
         self.time_size = time_size
-        self.data_dir = data_dir
-        self.seed = seed
-        self.progress_bar = progress_bar
         self.balanced_data = balanced_data
 
-        if self.seed is not None:
-            np.random.seed(self.seed)
+    @staticmethod
+    def _pad_data(data: np.ndarray, max_len: int):
+        data_dtype = data.dtype
+        if len(data) < max_len:
+            pad_values = np.zeros([max_len - len(data), *data.shape[1:]], dtype=data_dtype)
+            data = np.concatenate([data, pad_values], axis=0)
 
-        self.file_names = self._read_file_names()
-
-    def _read_file_names(self):
-        return [file_name[:-4] for file_name in os.listdir(self.data_dir) if file_name.endswith(".avi")]
+        return data
 
     def iter_epoch_file_names(self):
         permutation = np.random.permutation(len(self.file_names))
@@ -46,22 +47,6 @@ class VideoDataLoader:
             batch = [self.file_names[index] for index in batch]
 
             yield batch
-
-    @staticmethod
-    def _pad_data(data: np.ndarray, max_len: int):
-        data_dtype = data.dtype
-        if len(data) < max_len:
-            pad_values = np.zeros([max_len - len(data), *data.shape[1:]], dtype=data_dtype)
-            data = np.concatenate([data, pad_values], axis=0)
-
-        return data
-
-    def __len__(self):
-        len_batch = len(self.file_names) // self.batch_size
-        if len(self.file_names) % self.batch_size != 0:
-            len_batch += 1
-
-        return len_batch
 
     def iter_epoch_data(
             self,
