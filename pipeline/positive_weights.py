@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from data_utils.data_handler import load_data_general
-from pipeline.data_loader import DataLoader
+from pipeline.video_data_loader import VideoDataLoader
 
 
 class PositiveWeightCalculator:
@@ -34,7 +34,7 @@ class PositiveWeightCalculator:
 
             mask = None
             if self.balanced_data:
-                mask = DataLoader.balance_data_mask(keys)
+                mask = VideoDataLoader.balance_data_mask(keys)
 
             buttons = self._load_buttons(keys, mask=mask)
             pos_count = pos_count + np.array([sum(buttons[:, i] == 1) for i in range(buttons.shape[1])])

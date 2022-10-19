@@ -1,11 +1,16 @@
+import pickle
 import time
 from typing import Optional, List
 
 import cv2
 import numpy as np
+import torch
+from einops.layers.torch import Rearrange
+from torch import nn
 
 from draw_utils.keyboard import draw_keyboard
 from draw_utils.mouse import draw_mouse
+from image_utils.weak_image_augmentation import WeakAugmeneter
 from key_utils.keyboard_handler import inv_binary_key
 
 
@@ -186,3 +191,80 @@ def load_video_len(file_name: str):
     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     return length
+
+
+def load_video_len_augmented(file_name: str):
+    video_len = load_video_len(file_name)
+    augmented_file_name = file_name.replace(".avi", ".aug")
+
+    with open(augmented_file_name, "rb") as f:
+        augmented_frames_data = pickle.load(f)
+
+    augmented_len = augmented_frames_data[:, 1].sum()
+    total_len = video_len + augmented_len
+    return total_len
+
+
+def load_images_augmented_iterator(
+        file_name: str,
+        permutation: Optional[np.array] = None,
+        random_permutation: bool = False
+):
+    augmenter = nn.Sequential(
+        Rearrange("h w c-> 1 c h w"),
+        WeakAugmeneter(),
+        Rearrange("1 c h w -> h w c"),
+    )
+
+    # compute lens
+    total_len = load_video_len_augmented(file_name)
+    video_len = load_video_len(file_name)
+
+    # read augmented data
+    augmented_file_name = file_name.replace(".avi", ".aug")
+    with open(augmented_file_name, "rb") as f:
+        augmented_frames_data = pickle.load(f)
+
+    original_reference_frames = [i for i in range(video_len)]
+    augmented_reference_frames = [frame_index for frame_index, frame_len in augmented_frames_data for _ in range(frame_len)]
+
+    # combine the two lists
+    reference_frames = original_reference_frames + augmented_reference_frames
+
+    if permutation is None:
+        if random_permutation:
+            permutation = np.random.permutation(total_len)
+        else:
+            permutation = np.arange(total_len)
+
+    # open video
+    cap = cv2.VideoCapture(file_name)
+
+    for i in range(total_len):
+        index = permutation[i]
+        frame_reference = reference_frames[index]
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_reference)
+        _, frame = cap.read()
+        if index < video_len:
+            yield frame
+        else:
+            frame = torch.from_numpy(frame).float() / 255
+            frame = augmenter(frame)
+            frame = frame.numpy()
+            frame *= 255
+            frame = frame.astype(np.uint8)
+            yield frame
+
+
+if __name__ == "__main__":
+    images_iter = load_images_augmented_iterator("data/big_shots/train/tmp0inn4dtw.avi", random_permutation=True)
+    for i, image in enumerate(images_iter):
+        cv2.imshow("image", image)
+
+        time.sleep(1 / 4)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+

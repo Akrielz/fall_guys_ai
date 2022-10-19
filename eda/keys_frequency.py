@@ -1,4 +1,4 @@
-from pipeline.data_loader import DataLoader
+from pipeline.video_data_loader import VideoDataLoader
 
 
 def list_to_int(a: list):
@@ -21,7 +21,7 @@ def print_stats(dictionary):
 
 
 def get_stats(path: str):
-    gatherer = DataLoader(
+    gatherer = VideoDataLoader(
         batch_size=1, time_size=8,
         data_dir=path, seed=0,
         progress_bar=True, balanced_data=False

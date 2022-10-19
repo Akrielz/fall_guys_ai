@@ -9,7 +9,7 @@ from data_utils.data_handler import load_data_general
 from image_utils.video_handler import load_video_batch_iterator, load_video_len
 
 
-class DataLoader:
+class VideoDataLoader:
     def __init__(
             self,
             batch_size: int,
@@ -207,7 +207,7 @@ class DataLoader:
 
 
 if __name__ == "__main__":
-    gatherer = DataLoader(
+    gatherer = VideoDataLoader(
         batch_size=1, time_size=8,
         data_dir="data/big_fans/train", seed=0,
         progress_bar=True, balanced_data=True

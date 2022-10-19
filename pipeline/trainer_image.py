@@ -15,7 +15,7 @@ from tqdm import tqdm
 from vision_models_playground.models.augmenters import Augmeneter
 
 from image_utils.image_handler import threshold_frame
-from pipeline.data_loader import DataLoader
+from pipeline.video_data_loader import VideoDataLoader
 
 
 class TrainerImage:
@@ -63,7 +63,7 @@ class TrainerImage:
 
         # Create data gatherers
         train_data_dir = os.path.join(self.data_dir, 'train')
-        train_gatherer = DataLoader(
+        train_gatherer = VideoDataLoader(
             batch_size=self.batch_size,
             time_size=self.time_size,
             data_dir=train_data_dir,
@@ -73,7 +73,7 @@ class TrainerImage:
         )
 
         test_data_dir = os.path.join(self.data_dir, 'test')
-        test_gatherer = DataLoader(
+        test_gatherer = VideoDataLoader(
             batch_size=self.batch_size,
             time_size=self.time_size,
             data_dir=test_data_dir,
