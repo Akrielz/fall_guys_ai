@@ -144,16 +144,12 @@ class ImageDataLoader(DataLoader):
         file_names_avi = [os.path.join(self.data_dir, f"{file_name}.avi") for file_name in file_names]
         file_names_keys = [os.path.join(self.data_dir, f"{file_name}.keys") for file_name in file_names]
 
-        if self.balance_data:
-            augmented_iterators = [
-                load_images_augmented_iterator(file_name=file_name, random_permutation=True)
-                for file_name in file_names_avi
-            ]
-        else:
-            augmented_iterators = [
-                load_images_iterator(file_name=file_name, random_permutation=True)
-                for file_name in file_names_avi
-            ]
+        iter_func = load_images_augmented_iterator if self.balance_data else load_images_iterator
+
+        augmented_iterators = [
+            iter_func(file_name=file_name, random_permutation=True)
+            for file_name in file_names_avi
+        ]
 
         all_keys = [load_data_general(file_name) for file_name in file_names_keys]
 
@@ -179,7 +175,7 @@ class ImageDataLoader(DataLoader):
 
 if __name__ == "__main__":
     gatherer = ImageDataLoader(
-        batch_size=8,
+        batch_size=16,
         data_dir="data/full_tilt/train",
         seed=0,
         progress_bar=True,
