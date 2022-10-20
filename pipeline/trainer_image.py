@@ -1,7 +1,7 @@
 import os
 from copy import deepcopy
 from datetime import datetime
-from typing import Optional, Literal, List, Tuple
+from typing import Optional, Literal, List, Tuple, Dict
 
 import numpy as np
 import torch.optim
@@ -16,7 +16,6 @@ from vision_models_playground.models.augmenters import Augmeneter
 
 from image_utils.image_handler import threshold_frame
 from pipeline.image_data_loader import ImageDataLoader
-from pipeline.video_data_loader import VideoDataLoader
 
 
 class TrainerImage:
@@ -26,6 +25,7 @@ class TrainerImage:
             optimizer: torch.optim.Optimizer,
             loss_fn: nn.Module,
             device: torch.device,
+            key_mapping: Dict[int, int],
             metrics: Optional[List[nn.Module]] = None,
             seed: Optional[int] = None,
             data_dir: str = 'data',
@@ -56,6 +56,7 @@ class TrainerImage:
         self.scheduler = scheduler
         self.original_image_size = original_image_size
         self.resize_image_size = resize_image_size
+        self.key_mapping = key_mapping
 
         # Move model to device
         self.model.to(self.device)
@@ -78,7 +79,7 @@ class TrainerImage:
             data_dir=test_data_dir,
             seed=self.seed,
             progress_bar=False,
-            balance_data=False
+            balance_data=True
         )
 
         self.gatherers = {
@@ -190,17 +191,10 @@ class TrainerImage:
         # Eliminate [1 2 3]
         keys = keys[:, 3:]
 
-        # Compute total classes
-        total_classes = 2**len(keys[0])
-
         # Convert to the state
         keys = [sum(1 << i for i, b in enumerate(key) if b) for key in keys]
+        keys = [self.key_mapping[key] for key in keys]
         keys = torch.tensor(keys)
-
-        # Convert to one hot
-        # keys = torch.nn.functional.one_hot(keys, num_classes=total_classes)
-
-        # Cast to int
         keys = keys.long()
 
         return frames, keys

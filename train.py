@@ -5,18 +5,19 @@ import torch.nn as nn
 from torchmetrics import Accuracy
 from vision_models_playground import models
 
-from metrics.accuracy_complete import AccuracyComplete
-from metrics.accuracy_partial import AccuracyPartial
+from eda.keys_frequency import get_key_mapping
 from model.image.resnet_50 import build_resnet_50
 from pipeline.optimizer import get_optimizer
 from pipeline.trainer_image import TrainerImage
 
 if __name__ == "__main__":
+
     # Init vars
-    num_classes = 2**7
     in_channels = 4
     balanced_data = True
     data_dir = 'data/door_dash'
+    key_mapping = get_key_mapping(data_dir)
+    num_classes = len(key_mapping)
     device = torch.device('cuda')
 
     # Create model
@@ -33,8 +34,6 @@ if __name__ == "__main__":
 
     # Create Loss
     train_data_dir = os.path.join(data_dir, 'train')
-    # pos_weight = PositiveWeightCalculator(balanced_data, train_data_dir, num_classes).calculate()
-    # pos_weight = pos_weight.to(device)
 
     loss_fn = nn.CrossEntropyLoss()
 
@@ -61,6 +60,7 @@ if __name__ == "__main__":
         balanced_data=balanced_data,
         scheduler=scheduler,
         resize_image_size=(224, 224),
+        key_mapping=key_mapping,
     )
 
     # Train
