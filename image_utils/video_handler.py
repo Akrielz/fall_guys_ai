@@ -215,6 +215,31 @@ def augment_image(frame: np.array, augmenter: nn.Module):
     return frame
 
 
+def load_images_iterator(
+        file_name: str,
+        permutation: Optional[np.ndarray] = None,
+        random_permutation: bool = False,
+):
+    video_len = load_video_len(file_name)
+
+    if permutation is None:
+        if random_permutation:
+            permutation = np.random.permutation(video_len)
+        else:
+            permutation = np.arange(video_len)
+
+    # open video
+    cap = cv2.VideoCapture(file_name)
+
+    for i in range(video_len):
+        index = permutation[i]
+
+        cap.set(cv2.CAP_PROP_POS_FRAMES, index)
+        _, frame = cap.read()
+
+        yield frame, index
+
+
 def load_images_augmented_iterator(
         file_name: str,
         permutation: Optional[np.ndarray] = None,

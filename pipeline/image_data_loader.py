@@ -8,7 +8,8 @@ from torch import nn
 from tqdm import tqdm
 
 from data_utils.data_handler import load_data_general
-from image_utils.video_handler import load_images_augmented_iterator, load_video_len_augmented
+from image_utils.video_handler import load_images_augmented_iterator, load_video_len_augmented, load_images_iterator, \
+    load_video_len
 from image_utils.weak_image_augmentation import WeakAugmeneter
 from pipeline.data_loader import DataLoader
 
@@ -20,7 +21,8 @@ class ImageDataLoader(DataLoader):
             data_dir: str,
             seed: Optional[int] = None,
             progress_bar: bool = False,
-            return_device: torch.device = torch.device("cpu")
+            return_device: torch.device = torch.device("cpu"),
+            balance_data: bool = False,
     ):
         super().__init__(batch_size, data_dir, seed, progress_bar)
 
@@ -35,6 +37,8 @@ class ImageDataLoader(DataLoader):
         self.augmenter.eval()
         self.augmenter.to(self.own_device)
 
+        self.balance_data = balance_data
+
         self._total_len = None
 
     def __len__(self):
@@ -42,7 +46,11 @@ class ImageDataLoader(DataLoader):
             file_names = self.file_names
             file_names_avi = [os.path.join(self.data_dir, f"{file_name}.avi") for file_name in file_names]
 
-            all_len = [load_video_len_augmented(file_name) for file_name in file_names_avi]
+            if self.balance_data:
+                all_len = [load_video_len_augmented(file_name) for file_name in file_names_avi]
+            else:
+                all_len = [load_video_len(file_name) for file_name in file_names_avi]
+
             self._total_len = sum(all_len)
 
             self._len = self._total_len // self.batch_size
@@ -85,6 +93,9 @@ class ImageDataLoader(DataLoader):
             if progress_bar is not None:
                 progress_bar.update(1)
 
+        if len(frame_batch) == 0:
+            return
+
         yield self._prepare_to_yield(frame_batch, keys_batch, mouse_batch, to_augment_batch)
 
         if progress_bar is not None:
@@ -98,7 +109,11 @@ class ImageDataLoader(DataLoader):
         to_augment_batch = torch.from_numpy(np.array(to_augment_batch)).to(self.own_device)
 
         if to_augment_batch.sum() > 0:
+            frame_batch = frame_batch.float()
+            frame_batch[to_augment_batch] = frame_batch[to_augment_batch] / 255.0
             frame_batch[to_augment_batch] = self.augmenter(frame_batch[to_augment_batch])
+            frame_batch[to_augment_batch] = frame_batch[to_augment_batch] * 255.0
+            frame_batch = frame_batch.to(torch.uint8)
 
         if self.own_device != self.return_device:
             frame_batch = frame_batch.to(self.return_device)
@@ -112,33 +127,45 @@ class ImageDataLoader(DataLoader):
         file_names_avi = [os.path.join(self.data_dir, f"{file_name}.avi") for file_name in file_names]
         file_names_keys = [os.path.join(self.data_dir, f"{file_name}.keys") for file_name in file_names]
 
-        augmented_iterators = [
-            load_images_augmented_iterator(file_name=file_name, random_permutation=True)
-            for file_name in file_names_avi
-        ]
+        if self.balance_data:
+            augmented_iterators = [
+                load_images_augmented_iterator(file_name=file_name, random_permutation=True)
+                for file_name in file_names_avi
+            ]
+        else:
+            augmented_iterators = [
+                load_images_iterator(file_name=file_name, random_permutation=True)
+                for file_name in file_names_avi
+            ]
 
         all_keys = [load_data_general(file_name) for file_name in file_names_keys]
 
         while len(augmented_iterators) > 0:
-            aug_index = np.random.randint(0, len(augmented_iterators))
-            augmented_iterator = augmented_iterators[aug_index]
+            iter_index = np.random.randint(0, len(augmented_iterators))
+            augmented_iterator = augmented_iterators[iter_index]
 
             try:
-                frame, to_augment, i = next(augmented_iterator)
+                if self.balance_data:
+                    frame, to_augment, i = next(augmented_iterator)
+                else:
+                    frame, i = next(augmented_iterator)
+                    to_augment = False
+
             except StopIteration:
                 # remove iterator
-                augmented_iterators.pop(aug_index)
-                all_keys.pop(aug_index)
+                augmented_iterators.pop(iter_index)
+                all_keys.pop(iter_index)
                 continue
 
-            yield frame, all_keys[aug_index][i][0], all_keys[aug_index][i][1], to_augment
+            yield frame, all_keys[iter_index][i][0], all_keys[iter_index][i][1], to_augment
 
 
 if __name__ == "__main__":
     gatherer = ImageDataLoader(
         batch_size=8,
         data_dir="data/full_tilt/train", seed=0,
-        progress_bar=True
+        progress_bar=True,
+        balance_data=True,
     )
     for frames, keys, mouse in gatherer:
         pass
