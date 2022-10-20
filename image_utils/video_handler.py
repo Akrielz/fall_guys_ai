@@ -1,6 +1,6 @@
 import pickle
 import time
-from typing import Optional, List
+from typing import Optional, List, Tuple
 
 import cv2
 import numpy as np
@@ -217,10 +217,10 @@ def augment_image(frame: np.array, augmenter: nn.Module):
 
 def load_images_augmented_iterator(
         file_name: str,
-        permutation: Optional[np.array] = None,
+        permutation: Optional[np.ndarray] = None,
         random_permutation: bool = False,
         return_augmented: bool = False,
-):
+) -> Tuple[np.ndarray, bool, int]:
     augmenter = nn.Sequential(
         Rearrange("h w c-> 1 c h w"),
         WeakAugmeneter(),
@@ -258,11 +258,11 @@ def load_images_augmented_iterator(
         cap.set(cv2.CAP_PROP_POS_FRAMES, frame_reference)
         _, frame = cap.read()
         if index < video_len:
-            yield frame, False
+            yield frame, False, frame_reference
         else:
             if return_augmented:
                 frame = augment_image(frame, augmenter), True
-            yield frame, True
+            yield frame, True, frame_reference
 
 
 if __name__ == "__main__":

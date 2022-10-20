@@ -26,6 +26,13 @@ class VideoDataLoader(DataLoader):
         self.time_size = time_size
         self.balanced_data = balanced_data
 
+    def __len__(self):
+        len_batch = len(self.file_names) // self.batch_size
+        if len(self.file_names) % self.batch_size != 0:
+            len_batch += 1
+
+        return len_batch
+
     @staticmethod
     def _pad_data(data: np.ndarray, max_len: int):
         data_dtype = data.dtype
@@ -47,6 +54,9 @@ class VideoDataLoader(DataLoader):
             batch = [self.file_names[index] for index in batch]
 
             yield batch
+
+    def __iter__(self):
+        return self.iter_epoch_data(balanced_data=self.balanced_data)
 
     def iter_epoch_data(
             self,

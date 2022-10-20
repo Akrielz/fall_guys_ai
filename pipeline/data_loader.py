@@ -13,7 +13,7 @@ class DataLoader:
             progress_bar: bool = False,
     ):
         self.batch_size = batch_size
-        self.data_dir = data_dir
+        self.data_dir = os.path.normpath(data_dir)
         self.seed = seed
         self.progress_bar = progress_bar
 
@@ -24,10 +24,3 @@ class DataLoader:
 
     def _read_file_names(self):
         return [file_name[:-4] for file_name in os.listdir(self.data_dir) if file_name.endswith(".avi")]
-
-    def __len__(self):
-        len_batch = len(self.file_names) // self.batch_size
-        if len(self.file_names) % self.batch_size != 0:
-            len_batch += 1
-
-        return len_batch
