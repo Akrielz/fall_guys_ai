@@ -40,6 +40,7 @@ class ImageDataLoader(DataLoader):
         self.balance_data = balance_data
 
         self._total_len = None
+        self._len = None
 
     def __len__(self):
         if self._total_len is None:
@@ -71,7 +72,6 @@ class ImageDataLoader(DataLoader):
             progress_bar = tqdm(range(len(self)))
 
         for frame, keys, mouse, to_augment in self._iter_data():
-
             # add to batch
             frame_batch.append(frame)
             keys_batch.append(keys)
@@ -103,11 +103,27 @@ class ImageDataLoader(DataLoader):
             progress_bar.close()
 
     def _prepare_to_yield(self, frame_batch, keys_batch, mouse_batch, to_augment_batch):
-        frame_batch = torch.from_numpy(np.array(frame_batch)).to(self.own_device)
-        keys_batch = torch.from_numpy(np.array(keys_batch)).to(self.own_device)
-        mouse_batch = torch.from_numpy(np.array(mouse_batch)).to(self.own_device)
-        to_augment_batch = torch.from_numpy(np.array(to_augment_batch)).to(self.own_device)
 
+        # Convert into tensors
+        frame_batch = torch.from_numpy(np.array(frame_batch))
+        keys_batch = torch.from_numpy(np.array(keys_batch))
+        mouse_batch = torch.from_numpy(np.array(mouse_batch))
+        to_augment_batch = torch.from_numpy(np.array(to_augment_batch))
+
+        if not self.balance_data:
+            # Put data on correct device
+            frame_batch = frame_batch.to(self.return_device)
+            keys_batch = keys_batch.to(self.return_device)
+            mouse_batch = mouse_batch.to(self.return_device)
+            return frame_batch, keys_batch, mouse_batch
+
+        # Put data on own device
+        frame_batch = frame_batch.to(self.own_device)
+        keys_batch = keys_batch.to(self.own_device)
+        mouse_batch = mouse_batch.to(self.own_device)
+        to_augment_batch = to_augment_batch.to(self.own_device)
+
+        # Augment data
         if to_augment_batch.sum() > 0:
             frame_batch = frame_batch.float()
             frame_batch[to_augment_batch] = frame_batch[to_augment_batch] / 255.0
@@ -115,6 +131,7 @@ class ImageDataLoader(DataLoader):
             frame_batch[to_augment_batch] = frame_batch[to_augment_batch] * 255.0
             frame_batch = frame_batch.to(torch.uint8)
 
+        # Put data on correct device
         if self.own_device != self.return_device:
             frame_batch = frame_batch.to(self.return_device)
             keys_batch = keys_batch.to(self.return_device)
@@ -163,7 +180,8 @@ class ImageDataLoader(DataLoader):
 if __name__ == "__main__":
     gatherer = ImageDataLoader(
         batch_size=8,
-        data_dir="data/full_tilt/train", seed=0,
+        data_dir="data/full_tilt/train",
+        seed=0,
         progress_bar=True,
         balance_data=True,
     )
