@@ -20,8 +20,8 @@ class PositiveWeightCalculator:
         self.data_dir = data_dir
         self.num_classes = num_classes
         self.eps = 1e-6
-        self.min_value = 1.0 / min_max_factor
-        self.max_value = min_max_factor
+        self.min_value = 1.0 / min_max_factor if min_max_factor is not None else None
+        self.max_value = min_max_factor if min_max_factor is not None else None
 
     def __call__(self):
         self.key_files = self._read_file_names()

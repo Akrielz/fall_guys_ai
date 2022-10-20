@@ -79,7 +79,7 @@ class TrainerImage:
             data_dir=test_data_dir,
             seed=self.seed,
             progress_bar=False,
-            balance_data=True
+            balance_data=False
         )
 
         self.gatherers = {

@@ -52,7 +52,7 @@ def create_augmentation_files_for_map_dir(map_dir: str):
 
 
 def create_augmentation_files(data_dir: str = "data"):
-    for map_dir in os.listdir(data_dir)[-2:]:
+    for map_dir in os.listdir(data_dir):
         map_dir_train = os.path.join(data_dir, map_dir, "train")
         if len(os.listdir(map_dir_train)) == 0:
             continue

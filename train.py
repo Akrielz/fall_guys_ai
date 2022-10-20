@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # Init vars
     in_channels = 4
     balanced_data = True
-    data_dir = 'data/door_dash'
+    data_dir = 'data/the_whirlygig'
     key_mapping = get_key_mapping(data_dir)
     num_classes = len(key_mapping)
     device = torch.device('cuda')
