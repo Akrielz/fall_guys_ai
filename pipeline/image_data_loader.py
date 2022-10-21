@@ -23,6 +23,7 @@ class ImageDataLoader(DataLoader):
             progress_bar: bool = False,
             return_device: torch.device = torch.device("cpu"),
             balance_data: bool = False,
+            prob_fail_augment: float = 0.0,
     ):
         super().__init__(batch_size, data_dir, seed, progress_bar)
 
@@ -38,6 +39,7 @@ class ImageDataLoader(DataLoader):
         self.augmenter.to(self.own_device)
 
         self.balance_data = balance_data
+        self.prob_fail_augment = prob_fail_augment
 
         self._total_len = None
         self._len = None
@@ -122,6 +124,10 @@ class ImageDataLoader(DataLoader):
         keys_batch = keys_batch.to(self.own_device)
         mouse_batch = mouse_batch.to(self.own_device)
         to_augment_batch = to_augment_batch.to(self.own_device)
+
+        if self.prob_fail_augment > 0.0:
+            # Make each element of to_augment_batch become 0 with probability self.prob_fail_augment
+            to_augment_batch = torch.bernoulli(to_augment_batch * (1.0 - self.prob_fail_augment))
 
         # Augment data
         if to_augment_batch.sum() > 0:

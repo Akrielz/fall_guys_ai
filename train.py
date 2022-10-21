@@ -64,6 +64,7 @@ if __name__ == "__main__":
         balanced_data=balanced_data,
         scheduler=scheduler,
         resize_image_size=(224, 224),
+        prob_soft_aug_fail=0.02,
     )
 
     # Train

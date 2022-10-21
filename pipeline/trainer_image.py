@@ -38,6 +38,7 @@ class TrainerImage:
             scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
             original_image_size: Tuple[int, int] = (216, 384),
             resize_image_size: Optional[Tuple[int, int]] = None,
+            prob_soft_aug_fail: float = 0.0,
     ):
         data_dir = os.path.normpath(data_dir)
 
@@ -55,6 +56,7 @@ class TrainerImage:
         self.scheduler = scheduler
         self.original_image_size = original_image_size
         self.resize_image_size = resize_image_size
+        self.prob_soft_aug_fail = prob_soft_aug_fail
 
         # Move model to device
         self.model.to(self.device)
@@ -68,6 +70,7 @@ class TrainerImage:
             seed=self.seed,
             progress_bar=False,
             balance_data=balanced_data,
+            prob_fail_augment=prob_soft_aug_fail,
         )
 
         test_data_dir = os.path.join(self.data_dir, 'test')
