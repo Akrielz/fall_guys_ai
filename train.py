@@ -16,10 +16,10 @@ if __name__ == "__main__":
     # Init vars
     in_channels = 4
     balanced_data = True
-    data_dir = 'data/dizzy_heights'
+    data_dir = 'data/roll_on'
     num_classes = 2**7
     device = torch.device('cuda')
-    agent_path = "trained_agents/the_whirlygig/resnet50_pretrained/2022-10-20_21-23-14/model_last.pt"
+    agent_path = "trained_agents/dizzy_heights/resnet50_pretrained/2022-10-21_20-13-54/model_last.pt"
 
     # Create model
     # model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
@@ -28,7 +28,8 @@ if __name__ == "__main__":
     # model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
     # model = load_agent(agent_path, model, device)
 
-    model = load_resnet_50(agent_path, device, in_channels=in_channels, num_classes=num_classes)
+    model = load_resnet_50(agent_path, device, in_channels=in_channels, num_classes=num_classes,
+                           previous_num_classes=num_classes)
 
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-3)

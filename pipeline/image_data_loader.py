@@ -127,7 +127,7 @@ class ImageDataLoader(DataLoader):
 
         if self.prob_fail_augment > 0.0:
             # Make each element of to_augment_batch become 0 with probability self.prob_fail_augment
-            to_augment_batch = torch.bernoulli(to_augment_batch * (1.0 - self.prob_fail_augment))
+            to_augment_batch = torch.bernoulli(to_augment_batch * (1.0 - self.prob_fail_augment)).bool()
 
         # Augment data
         if to_augment_batch.sum() > 0:
