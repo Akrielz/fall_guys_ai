@@ -2,21 +2,22 @@ import torch
 import torch.nn as nn
 from torchmetrics import Accuracy
 
+from eda.keys_frequency import get_key_mapping
 from model.image.fake import FakeModel
 from pipeline.optimizer import get_optimizer
 from pipeline.trainer_image import TrainerImage
 
 if __name__ == "__main__":
-    # Init vars
-    num_classes = 2**7
     in_channels = 4
     balanced_data = True
-    data_dir = 'data/block_party'
+    data_dir = 'data/the_whirlygig'
+    key_mapping = get_key_mapping(data_dir)
+    num_classes = len(key_mapping)
     device = torch.device('cuda')
 
     # Create FakeModel
     output = torch.zeros(num_classes).to(device)
-    output[2] = 1
+    output[key_mapping[2]] = 1
     model = FakeModel(output=output)
 
     # Create Optimizer
@@ -50,6 +51,7 @@ if __name__ == "__main__":
         balanced_data=balanced_data,
         scheduler=scheduler,
         resize_image_size=(224, 224),
+        key_mapping=key_mapping,
     )
 
     # Test

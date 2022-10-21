@@ -13,28 +13,8 @@ from image_utils.image_handler import get_screenshot_mss_api, threshold_frame, i
 from key_utils.input_check import input_check
 from key_utils.press_keys import keyboard_keys, press_keys
 from model.image.resnet_50 import build_resnet_50
+from model.utility.load_agent import load_agent
 from record_data import print_current_time
-
-
-def load_agent(
-        agent_path: str,
-        model: nn.Module,
-        device: torch.device = "cpu",
-):
-    # Load weights
-    weights = torch.load(agent_path)
-
-    # Put received model on device
-    model.to(device)
-
-    # Load model
-    model.load_state_dict(weights)
-    # del weights
-
-    # Put model in evaluation mode
-    model.eval()
-
-    return model
 
 
 def get_state(key_mapping: Dict, action: int):
@@ -142,6 +122,7 @@ def use_agent_image(
         model=model,
         device=device,
     )
+    agent.eval()
 
     rescale_layer = None
     if resize_image_size is not None:
@@ -181,7 +162,7 @@ def use_agent_image(
 
 
 if __name__ == "__main__":
-    agent_path = "trained_agents/the_whirlygig/resnet50_pretrained/2022-10-20_21-23-14/model_best.pt"
+    agent_path = "trained_agents/the_whirlygig/resnet50_pretrained/2022-10-20_21-23-14/model_last.pt"
 
     data_dir = 'data/the_whirlygig'
     key_mapping = get_key_mapping(data_dir)

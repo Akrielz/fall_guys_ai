@@ -7,6 +7,7 @@ from vision_models_playground import models
 
 from eda.keys_frequency import get_key_mapping
 from model.image.resnet_50 import build_resnet_50
+from model.utility.load_agent import load_agent
 from pipeline.optimizer import get_optimizer
 from pipeline.trainer_image import TrainerImage
 
@@ -19,12 +20,14 @@ if __name__ == "__main__":
     key_mapping = get_key_mapping(data_dir)
     num_classes = len(key_mapping)
     device = torch.device('cuda')
+    agent_path = "trained_agents/the_whirlygig/resnet50_pretrained/2022-10-20_21-23-14/model_last.pt"
 
     # Create model
     # model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
 
     # Create ResNet50 pretrained model from torchvision
     model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
+    model = load_agent(agent_path, model, device)
 
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-3)
@@ -64,4 +67,5 @@ if __name__ == "__main__":
     )
 
     # Train
-    trainer.train(num_epochs=20, run_test_too=True)
+    # trainer.train(num_epochs=20, run_test_too=True)
+    trainer.test()
