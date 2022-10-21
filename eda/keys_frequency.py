@@ -1,5 +1,7 @@
+import os
 from typing import List
 
+from data_utils.data_handler import load_data_general, save_data_general
 from pipeline.video_data_loader import VideoDataLoader
 
 
@@ -45,6 +47,12 @@ def get_stats(path: str):
 
 
 def get_key_mapping(round_dir: str):
+    # check if key_mapping exists in "round_dir/key_mapping.stats"
+
+    key_mapping_path = os.path.join(round_dir, "key_mapping.stats")
+    if os.path.exists(key_mapping_path):
+        return load_data_general(key_mapping_path)
+
     key_dict_train = get_stats(f"{round_dir}/train")
     key_dict_test = get_stats(f"{round_dir}/test")
 
@@ -60,6 +68,9 @@ def get_key_mapping(round_dir: str):
     key_mapping = dict()
     for i, key in enumerate(sorted(key_dict.keys())):
         key_mapping[key] = i
+
+    # save the key_mapping using pickle
+    save_data_general(key_mapping, key_mapping_path)
 
     return key_mapping
 

@@ -50,12 +50,13 @@ def get_agent_action(
         rescale_layer: Optional[nn.Sequential] = None,
         device: torch.device = "cpu",
 ):
+    # Process frame
     frame = process_frame(device, frame, rescale_layer)
 
     # Get actions
     actions = agent(frame)
 
-    # Apply sigmoid
+    # Decode actions
     actions = decode_actions(actions, key_mapping)
 
     return actions

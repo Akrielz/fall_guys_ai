@@ -296,12 +296,13 @@ class TrainerImage:
                               f"| {loss_log} | {metric_log}"
 
         # Add the progress to the tensorboard writer
-        self.writer.add_scalar(f'{phase}/loss', loss.item(), step_index)
+        step = epoch * len(gatherer) + step_index
+        self.writer.add_scalar(f'{phase}/loss', loss.item(), step)
         for metric_value, metric in zip(metric_values, metrics):
-            self.writer.add_scalar(f'{phase}/{metric.__repr__()[:-2]}', metric_value, step_index)
+            self.writer.add_scalar(f'{phase}/{metric.__repr__()[:-2]}', metric_value, step)
 
         if self.best_loss_mean != float('inf'):
-            self.writer.add_scalar(f'{phase}/best_loss', self.best_loss_mean, step_index)
+            self.writer.add_scalar(f'{phase}/best_loss', self.best_loss_mean, step)
 
         return description
 
@@ -312,9 +313,11 @@ class TrainerImage:
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            if run_test_too:
-                with torch.no_grad():
-                    self._do_epoch('test', epoch)
+            if not run_test_too:
+                continue
+
+            with torch.no_grad():
+                self._do_epoch('test', epoch)
 
     @torch.no_grad()
     def test(self):
