@@ -29,11 +29,12 @@ def load_resnet_50(
         device: torch.device = torch.device('cpu'),
         in_channels: int = 4,
         num_classes: Optional[int] = None,
+        previous_num_classes: Optional[int] = None,
         **kwargs
 ):
-    agent_data_dir = f"data/{agent_path.split('/')[1]}"
-    key_mapping = get_key_mapping(agent_data_dir)
-    previous_num_classes = len(key_mapping)
+    if previous_num_classes is None:
+        previous_num_classes = num_classes
+
     model = build_resnet_50(in_channels=in_channels, num_classes=previous_num_classes, **kwargs)
     model = load_agent(agent_path, model, device)
 
