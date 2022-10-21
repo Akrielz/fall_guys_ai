@@ -25,7 +25,6 @@ class TrainerImage:
             optimizer: torch.optim.Optimizer,
             loss_fn: nn.Module,
             device: torch.device,
-            key_mapping: Dict[int, int],
             metrics: Optional[List[nn.Module]] = None,
             seed: Optional[int] = None,
             data_dir: str = 'data',
@@ -56,7 +55,6 @@ class TrainerImage:
         self.scheduler = scheduler
         self.original_image_size = original_image_size
         self.resize_image_size = resize_image_size
-        self.key_mapping = key_mapping
 
         # Move model to device
         self.model.to(self.device)
@@ -193,7 +191,6 @@ class TrainerImage:
 
         # Convert to the state
         keys = [sum(1 << i for i, b in enumerate(key) if b) for key in keys]
-        keys = [self.key_mapping[key] for key in keys]
         keys = torch.tensor(keys)
         keys = keys.long()
 

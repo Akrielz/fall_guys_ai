@@ -17,8 +17,7 @@ if __name__ == "__main__":
     in_channels = 4
     balanced_data = True
     data_dir = 'data/dizzy_heights'
-    key_mapping = get_key_mapping(data_dir)
-    num_classes = len(key_mapping)
+    num_classes = 2**7
     device = torch.device('cuda')
     agent_path = "trained_agents/the_whirlygig/resnet50_pretrained/2022-10-20_21-23-14/model_last.pt"
 
@@ -65,7 +64,6 @@ if __name__ == "__main__":
         balanced_data=balanced_data,
         scheduler=scheduler,
         resize_image_size=(224, 224),
-        key_mapping=key_mapping,
     )
 
     # Train
