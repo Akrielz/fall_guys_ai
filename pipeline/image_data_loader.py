@@ -175,11 +175,11 @@ class ImageDataLoader(DataLoader):
 
 if __name__ == "__main__":
     gatherer = ImageDataLoader(
-        batch_size=16,
-        data_dir="data/full_tilt/train",
+        batch_size=1,
+        data_dir="data/the_whirlygig/train",
         seed=0,
         progress_bar=True,
-        balance_data=True,
+        balance_data=False,
     )
-    for frames, keys, mouse in gatherer:
-        pass
+
+    print(len(gatherer))

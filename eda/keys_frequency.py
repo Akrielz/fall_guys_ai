@@ -1,8 +1,14 @@
+from typing import List
+
 from pipeline.video_data_loader import VideoDataLoader
 
 
-def list_to_int(a: list):
+def list_to_int(a: List[bool]):
     return sum(1 << i for i, b in enumerate(a) if b)
+
+
+def int_to_list(a: int):
+    return [int(x) for x in list((bin(a)[2:])[::-1])]
 
 
 def print_stats(dictionary):
