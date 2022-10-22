@@ -1,9 +1,9 @@
 from data_utils.data_handler import load_data_general
 from image_utils.video_handler import view_video, load_video_iterator
-from pipeline.data_loader import DataLoader
+from pipeline.video_data_loader import VideoDataLoader
 
 if __name__ == "__main__":
-    file_name = "data/big_fans/train/tmpa8737nwg"
+    file_name = "data/the_whirlygig/train/tmp96wceki8.avi"
     keys = load_data_general(f"{file_name}.keys")
 
     mask = None

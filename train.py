@@ -2,28 +2,34 @@ import os
 
 import torch
 import torch.nn as nn
+from torchmetrics import Accuracy
 from vision_models_playground import models
 
-from metrics.accuracy_complete import AccuracyComplete
-from metrics.accuracy_partial import AccuracyPartial
-from model.image.resnet_50 import build_resnet_50
+from eda.keys_frequency import get_key_mapping
+from model.image.resnet_50 import build_resnet_50, load_resnet_50
+from model.utility.load_agent import load_agent
 from pipeline.optimizer import get_optimizer
-from pipeline.positive_weights import PositiveWeightCalculator
 from pipeline.trainer_image import TrainerImage
 
 if __name__ == "__main__":
+
     # Init vars
-    num_classes = 7
     in_channels = 4
     balanced_data = True
-    data_dir = 'data/door_dash'
+    data_dir = 'data/roll_on'
+    num_classes = 2**7
     device = torch.device('cuda')
+    agent_path = "trained_agents/dizzy_heights/resnet50_pretrained/2022-10-21_20-13-54/model_last.pt"
 
     # Create model
     # model = models.classifiers.build_cvt_13(num_classes=num_classes, in_channels=in_channels)
 
     # Create ResNet50 pretrained model from torchvision
-    model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
+    # model = build_resnet_50(weights="IMAGENET1K_V2", in_channels=in_channels, num_classes=num_classes)
+    # model = load_agent(agent_path, model, device)
+
+    model = load_resnet_50(agent_path, device, in_channels=in_channels, num_classes=num_classes,
+                           previous_num_classes=num_classes)
 
     # Create Optimizer
     optimizer = get_optimizer(params=model.parameters(), lr=5e-3)
@@ -33,15 +39,12 @@ if __name__ == "__main__":
 
     # Create Loss
     train_data_dir = os.path.join(data_dir, 'train')
-    pos_weight = PositiveWeightCalculator(balanced_data, train_data_dir, num_classes).calculate()
-    pos_weight = pos_weight.to(device)
 
-    loss_fn = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
+    loss_fn = nn.CrossEntropyLoss()
 
     # Create metrics
     metrics = [
-        AccuracyComplete(num_classes=num_classes),  # For all inputs at once
-        AccuracyPartial(num_classes=num_classes),  # For partial inputs
+        Accuracy(num_classes=num_classes),  # For all inputs at once
     ]
 
     # Create Trainer
@@ -53,8 +56,7 @@ if __name__ == "__main__":
         metrics=metrics,
         seed=0,
         data_dir=data_dir,
-        batch_size=1,
-        time_size=4,
+        batch_size=4,
         save_every_n_steps=100,
         model_name='resnet50_pretrained',
         consider_last_n_losses=100,
@@ -63,7 +65,9 @@ if __name__ == "__main__":
         balanced_data=balanced_data,
         scheduler=scheduler,
         resize_image_size=(224, 224),
+        prob_soft_aug_fail=0.02,
     )
 
     # Train
     trainer.train(num_epochs=20, run_test_too=True)
+    # trainer.test()

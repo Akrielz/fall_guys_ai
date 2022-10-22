@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from data_utils.data_handler import load_data_general
-from pipeline.data_loader import DataLoader
+from pipeline.video_data_loader import VideoDataLoader
 
 
 class PositiveWeightCalculator:
@@ -20,8 +20,8 @@ class PositiveWeightCalculator:
         self.data_dir = data_dir
         self.num_classes = num_classes
         self.eps = 1e-6
-        self.min_value = 1.0 / min_max_factor
-        self.max_value = min_max_factor
+        self.min_value = 1.0 / min_max_factor if min_max_factor is not None else None
+        self.max_value = min_max_factor if min_max_factor is not None else None
 
     def __call__(self):
         self.key_files = self._read_file_names()
@@ -34,7 +34,7 @@ class PositiveWeightCalculator:
 
             mask = None
             if self.balanced_data:
-                mask = DataLoader.balance_data_mask(keys)
+                mask = VideoDataLoader.balance_data_mask(keys)
 
             buttons = self._load_buttons(keys, mask=mask)
             pos_count = pos_count + np.array([sum(buttons[:, i] == 1) for i in range(buttons.shape[1])])

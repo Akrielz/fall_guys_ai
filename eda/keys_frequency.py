@@ -1,8 +1,16 @@
-from pipeline.data_loader import DataLoader
+import os
+from typing import List
+
+from data_utils.data_handler import load_data_general, save_data_general
+from pipeline.video_data_loader import VideoDataLoader
 
 
-def list_to_int(a: list):
+def list_to_int(a: List[bool]):
     return sum(1 << i for i, b in enumerate(a) if b)
+
+
+def int_to_list(a: int):
+    return [int(x) for x in list((bin(a)[2:])[::-1])]
 
 
 def print_stats(dictionary):
@@ -21,7 +29,7 @@ def print_stats(dictionary):
 
 
 def get_stats(path: str):
-    gatherer = DataLoader(
+    gatherer = VideoDataLoader(
         batch_size=1, time_size=8,
         data_dir=path, seed=0,
         progress_bar=True, balanced_data=False
@@ -38,5 +46,36 @@ def get_stats(path: str):
     return my_dict
 
 
+def get_key_mapping(round_dir: str):
+    # check if key_mapping exists in "round_dir/key_mapping.stats"
+
+    key_mapping_path = os.path.join(round_dir, "key_mapping.stats")
+    if os.path.exists(key_mapping_path):
+        return load_data_general(key_mapping_path)
+
+    key_dict_train = get_stats(f"{round_dir}/train")
+    key_dict_test = get_stats(f"{round_dir}/test")
+
+    # combine train and test into a single dict
+    key_dict = dict()
+    for i in range(2 ** 7):
+        key_dict[i] = key_dict_train[i] + key_dict_test[i]
+
+    # filter out keys that are not used
+    key_dict = {key: val for key, val in key_dict.items() if val}
+
+    # create new class mapping for the keys
+    key_mapping = dict()
+    for i, key in enumerate(sorted(key_dict.keys())):
+        key_mapping[key] = i
+
+    # save the key_mapping using pickle
+    save_data_general(key_mapping, key_mapping_path)
+
+    return key_mapping
+
+
 if __name__ == "__main__":
-    print_stats(get_stats("data/big_fans/train"))
+    key_dict = get_stats("data/big_fans/train")
+    key_mapping = get_key_mapping("data/big_fans")
+    print_stats(key_dict)

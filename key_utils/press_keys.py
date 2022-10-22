@@ -10,10 +10,13 @@ mouse_release_functions = [release_left_click, release_right_click]
 
 
 def press_keyboard_keys(keys: List[str], actions: List[bool]):
-    for key, action in zip(keys, actions):
+    for i, (key, action) in enumerate(zip(keys, actions)):
         if action:
             keyboard.press(key)
         else:
+            keyboard.release(key)
+
+        if i == 0:
             keyboard.release(key)
 
 
