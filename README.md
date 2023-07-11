@@ -23,6 +23,13 @@ The purpose of the models are to predict the next best move considering the last
 Due to the fact that there can be multiple keys pressed at once, each combination of keys is modeled as a state
 and the model predicts directly the combination of keys.
 
+## Visualizing data
+In ```view_data.py``` there is a script that allows a fast visualization of the data.
+
+## Play in game
+In order to use the model in real time in game, there is the ```use_agent.py``` script which
+will use the model in inference, and will press the keys that the model predicted directly in game.
+
 ## Team Members
 
 <a href="https://github.com/Akrielz/Reinforcement-Learning-Water-World/graphs/contributors">
@@ -37,10 +44,3 @@ and the model predicts directly the combination of keys.
     [LinkedIn](https://www.linkedin.com/in/robert-milea-027a2420a/) | 
     [GitHub](https://github.com/DuArms/)
   )
-
-## Visualizing data
-In ```view_data.py``` there is a script that allows a fast visualization of the data.
-
-## Play in game
-In order to use the model in real time in game, there is the ```use_agent.py``` script which
-will use the model in inference, and will press the keys that the model predicted directly in game.
